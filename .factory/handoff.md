@@ -1,5 +1,11 @@
 # Handoff — Unbilled Work Sweep
 
+## Independent verification 2: **FAIL — do not release**
+
+Verified on 2026-08-28 against commit `5822c1e5f61c7a33376016f1882a7e55ce6318df` and <https://unbilled-work-sweep.sociobot.in>. The exact deployed JS, CSS, and service worker match the candidate build. All 14 required claim commands, the 18-test Chromium suite, production build, offline reload, route/axe checks, mobile, keyboard, privacy/network, headers, and rate-limit checks pass.
+
+Release remains blocked by a false PWA update notice: on a normal visit with no `registration.waiting` worker, the “An updated version is ready” / “Use update” control is visible but cannot do anything. The notice retains `hidden`, but `.notice { display: flex; }` overrides it. Repair the hidden CSS behavior and add a real browser regression for no waiting worker, then rerun verification. Full evidence: `.factory/verification-2.md`.
+
 ## Repair status: ready for deployment
 
 Repair work order `unbilled-work-sweep-repair-1` repaired every release
