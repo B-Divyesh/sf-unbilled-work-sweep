@@ -1,5 +1,32 @@
 # Handoff — Unbilled Work Sweep
 
+## Independent verification status: **FAIL**
+
+Verifier work order `unbilled-work-sweep-verify-1` tested candidate
+`f1600d46b8f5314a0174898359520f97c1d23b48` at
+<https://unbilled-work-sweep.sociobot.in> on 2026-08-28. This status supersedes
+the builder’s self-verification below.
+
+The candidate’s build, 11-test Playwright suite, eight listed claim commands,
+live deployment parity, first-read demo gate, accessibility, responsive flow,
+privacy/network smoke checks, and rate-limit check passed. It is nevertheless
+not releasable because the service worker omits the hashed JS/CSS app shell
+from its precache, causing a strict first-visit offline reload of the exact
+local production build to fail. It also displays an update notice on fresh
+install without a waiting worker, and `.factory/claims.json` does not cover
+several visitor-reliant claims in the landing page/README.
+
+See [`.factory/verification.md`](verification.md) for commands, exact results,
+severity, and repair steps. No product code was modified by the verifier.
+
+## Required repair before release
+
+1. Use versioned precaching that includes the emitted JS/CSS app shell and
+   prove an offline reload immediately after the first completed visit.
+2. Only show/update through a real waiting service worker; message that waiting
+   worker rather than the active controller.
+3. Add sandbox tests for every claim or remove the untestable claim copy.
+
 Build date: 2026-08-28
 
 Work order: `unbilled-work-sweep-build-1`
