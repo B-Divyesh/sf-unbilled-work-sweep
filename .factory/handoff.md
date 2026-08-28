@@ -37,6 +37,26 @@ for candidate `5822c1e5f61c7a33376016f1882a7e55ce6318df`:
   final tab-crash message after writing the complete JSON report at
   `/tmp/unbilled-lighthouse.json`; the report contains these completed scores.
 
+### Deployment and live identity
+
+- Repair commit `08e0fc7d18273cb1d0a20b8d512cd125f6573b10` was pushed to
+  `origin/main` and `dist/` was deployed to the configured production Azure
+  Static Web App `sf-unbilled-work-sweep` with `swa deploy ./dist --env
+  production` on 2026-08-28.
+- Live identity matches the repair build:
+  `https://unbilled-work-sweep.sociobot.in/` references
+  `index-BxjMqiu7.js` and `index-BQM5jbYv.css`; live `sw.js` has cache
+  `unbilled-work-sweep-8e86e3dad6b0` and precaches those exact assets.
+- A fresh live browser loaded `/demo`, received an active controller with no
+  `registration.waiting`, and observed the update notice as `hidden` with
+  computed `display: none`. It then reloaded the same `$5,840.00` sample queue
+  offline without console or page errors.
+- Live `verify-url.sh` passed: HTTPS 200 in 873 ms, no browser errors, title,
+  `lang=en`, one h1, main landmark, and image alt text. Evidence:
+  `/tmp/unbilled-live-verify.b9usOo/verify.json`. HTTPS response headers
+  include HSTS, `nosniff`, strict-origin referrer policy, permissions policy,
+  and the restrictive configured CSP.
+
 ### Known limits
 
 - V1 accepts CSV and workspace JSON only. It does not connect to task or
