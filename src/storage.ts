@@ -1,0 +1,42 @@
+import { emptyState } from './data';
+import type { SweepState } from './types';
+
+const DB_NAME = 'unbilled-work-sweep';
+const DEMO_KEY = 'demo:unbilled-work-sweep';
+
+function db(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('workspace');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function loadState(demo: boolean): Promise<SweepState> {
+  if (demo) {
+    const saved = sessionStorage.getItem(DEMO_KEY);
+    return saved ? JSON.parse(saved) as SweepState : emptyState();
+  }
+  try {
+    const database = await db();
+    return await new Promise((resolve, reject) => {
+      const request = database.transaction('workspace').objectStore('workspace').get('current');
+      request.onsuccess = () => resolve((request.result as SweepState | undefined) ?? emptyState());
+      request.onerror = () => reject(request.error);
+    });
+  } catch { return emptyState(); }
+}
+
+export async function saveState(state: SweepState, demo: boolean): Promise<void> {
+  if (demo) { sessionStorage.setItem(DEMO_KEY, JSON.stringify(state)); return; }
+  const database = await db();
+  await new Promise<void>((resolve, reject) => {
+    const tx = database.transaction('workspace', 'readwrite');
+    tx.objectStore('workspace').put(state, 'current');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export function resetDemo(): void { sessionStorage.removeItem(DEMO_KEY); }
