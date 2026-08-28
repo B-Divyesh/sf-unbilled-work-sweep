@@ -1,10 +1,50 @@
 # Handoff — Unbilled Work Sweep
 
-## Independent verification 2: **FAIL — do not release**
+## Repair 2 — ready for static deployment
 
-Verified on 2026-08-28 against commit `5822c1e5f61c7a33376016f1882a7e55ce6318df` and <https://unbilled-work-sweep.sociobot.in>. The exact deployed JS, CSS, and service worker match the candidate build. All 14 required claim commands, the 18-test Chromium suite, production build, offline reload, route/axe checks, mobile, keyboard, privacy/network, headers, and rate-limit checks pass.
+This repair resolves the only release blocker in independent verification 2
+for candidate `5822c1e5f61c7a33376016f1882a7e55ce6318df`:
 
-Release remains blocked by a false PWA update notice: on a normal visit with no `registration.waiting` worker, the “An updated version is ready” / “Use update” control is visible but cannot do anything. The notice retains `hidden`, but `.notice { display: flex; }` overrides it. Repair the hidden CSS behavior and add a real browser regression for no waiting worker, then rerun verification. Full evidence: `.factory/verification-2.md`.
+- The PWA update notice now preserves the HTML `hidden` state with
+  `.notice[hidden] { display: none; }`. A normal visit with no waiting service
+  worker cannot show an inoperable “Use update” control.
+- Added a browser regression using a fresh controlled origin. It waits for the
+  service worker, proves `registration.waiting` is absent, and asserts that
+  `#update-notice` is hidden. The existing update-targeting regression still
+  proves that only a real waiting worker receives `SKIP_WAITING`.
+
+### Repair verification — 2026-08-28
+
+- Clean dependency install: `npm ci` passed with 0 audit vulnerabilities.
+- Type check: `npx tsc --noEmit` passed. There is no separate lint command;
+  the production build performs the same TypeScript check.
+- Production build: `npm run build` passed and created `dist/index.html`.
+  Initial JS is 29,423 bytes (10.67 KB gzip); CSS is 14,715 bytes (4.07 KB
+  gzip). Both are within the static budget.
+- Browser integration suite: `npm test` passed all 19 Chromium tests. This
+  covers the real PWA no-waiting-worker state, offline first-reload shell,
+  update targeting, desktop, 390×844 mobile, keyboard skip link, routes, Axe
+  serious/critical checks, privacy requests, demo storage, license mock, CSV
+  flows, and error recovery.
+- Claims: every one of the 14 commands declared in `.factory/claims.json` was
+  run individually and passed. Each ID has exactly one `@claim:` regression.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173 <evidence-dir>` passed:
+  200 response in 534 ms; no console/page errors; title, `lang=en`, one h1,
+  main landmark, and image alt text all present. Evidence:
+  `/tmp/unbilled-verify.UA0q51/verify.json`.
+- Mobile Lighthouse JSON: Performance 100, Accessibility 100, Best Practices
+  100, SEO 100; LCP 1,603 ms, CLS 0, TBT 31 ms. Lighthouse emitted its known
+  final tab-crash message after writing the complete JSON report at
+  `/tmp/unbilled-lighthouse.json`; the report contains these completed scores.
+
+### Known limits
+
+- V1 accepts CSV and workspace JSON only. It does not connect to task or
+  invoice accounts.
+- Matching uses normalized client and project names plus invoice timing. People
+  must review each suggestion.
+- Browser site-data clearing removes local work and paid snapshots. Workspace
+  JSON export is the backup path.
 
 ## Repair status: ready for deployment
 

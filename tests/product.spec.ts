@@ -184,6 +184,18 @@ test('the update action targets only the waiting worker', async () => {
   expect(app).not.toContain('navigator.serviceWorker.controller?.postMessage({ type: \'SKIP_WAITING\' })');
 });
 
+test('the update notice stays hidden when the controlled page has no waiting worker', async ({ page }) => {
+  const origin = `http://no-update-${Date.now()}.localhost:4173`;
+  await page.goto(`${origin}/demo`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    return Boolean(registration?.waiting);
+  })).toBe(false);
+  await expect(page.locator('#update-notice')).toBeHidden();
+});
+
 test('routes, keyboard landmarks, and serious accessibility issues pass', async ({ page }) => {
   for (const path of ['/', '/demo', '/privacy', '/terms', '/missing-page']) {
     await page.goto(path);
