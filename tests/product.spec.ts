@@ -20,6 +20,17 @@ test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) 
   await expect(page.getByText('Possible invoice:').first()).toBeVisible();
 });
 
+test('@claim:hours-times-rate calculates a missing amount from hours and rate', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'hours.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,hours,rate\n2026-08-01,Acme,Site,Hourly design,2,75')
+  });
+  await page.getByRole('button', { name: 'Import work' }).click();
+  await expect(page.getByTestId('queue-total')).toContainText('150');
+  await expect(page.getByRole('heading', { name: 'Hourly design' }).locator('xpath=ancestor::li')).toContainText('$150.00');
+});
+
 test('@claim:review-matches keeps suggestions under user control', async ({ page }) => {
   await page.goto('/demo');
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
@@ -44,7 +55,7 @@ test('@claim:csv-export exports one checklist row per queue item', async ({ page
   expect(content).toContain('Final responsive page build');
 });
 
-test('@claim:local-only sends no imported or demo rows off-device', async ({ page }) => {
+test('@claim:local-only sends no imported or demo review rows off-device', async ({ page }) => {
   const offOrigin: string[] = [];
   page.on('request', (request) => {
     if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') offOrigin.push(request.url());
@@ -53,18 +64,43 @@ test('@claim:local-only sends no imported or demo rows off-device', async ({ pag
   await page.locator('#file-work').setInputFiles({ name: 'private.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Private Client,Secret Job,Private task,completed,100') });
   await page.getByRole('button', { name: 'Import work' }).click();
   await page.getByRole('checkbox').first().check();
+  await page.goto('/demo');
+  await page.getByRole('button', { name: 'Keep unbilled' }).first().click();
   expect(offOrigin).toEqual([]);
 });
 
 test('@claim:offline-reload works offline after the first visit', async ({ page, context }) => {
-  await page.goto('/demo');
+  await page.goto(`http://pwa-offline-${Date.now()}.localhost:4173/demo`);
   await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload();
-  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  const cachedShell = await page.evaluate(async () => {
+    const entries = await Promise.all((await caches.keys()).map(async (name) => (await (await caches.open(name)).keys()).map((request) => new URL(request.url).pathname)));
+    return entries.flat();
+  });
+  expect(cachedShell.some((path) => /\/assets\/index-.+\.js$/u.test(path))).toBe(true);
+  expect(cachedShell.some((path) => /\/assets\/index-.+\.css$/u.test(path))).toBe(true);
   await context.setOffline(true);
+  const cachedModule = await page.evaluate(async () => {
+    const asset = performance.getEntriesByType('resource').map((entry) => entry.name).find((url) => /\/assets\/index-.+\.js$/u.test(url));
+    if (!asset) return { ok: false, length: 0 };
+    const response = await fetch(asset, { cache: 'no-store' });
+    return { ok: response.ok, length: (await response.text()).length };
+  });
+  expect(cachedModule.ok).toBe(true);
+  expect(cachedModule.length).toBeGreaterThan(1_000);
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Review work before you invoice' })).toBeVisible();
   await expect(page.getByTestId('work-list')).toBeVisible();
+});
+
+test('@claim:invoice-date-guard never suggests an invoice dated before its work', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({ name: 'work.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-10,Acme,Site,Later work,completed,100') });
+  await page.getByRole('button', { name: 'Import work' }).click();
+  await page.locator('#file-invoices').setInputFiles({ name: 'invoice.csv', mimeType: 'text/csv', buffer: Buffer.from('invoice date,invoice number,client,project\n2026-08-09,INV-1,Acme,Site') });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  await expect(page.getByRole('heading', { name: 'Later work' }).locator('..')).toContainText('No invoice match found');
+  await expect(page.getByTestId('queue-total')).toContainText('100');
 });
 
 test('@claim:paid-license uses the Sociobot checkout and verification contract', async ({ page }) => {
@@ -102,6 +138,50 @@ test('@claim:workspace-backup exports and restores the full workspace', async ({
   await page.locator('#import-workspace').setInputFiles(backupPath!);
   await expect(page.getByText('Workspace imported.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
+});
+
+test('@claim:demo-isolation keeps demo data separate and discards it when leaving', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({ name: 'real.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Real Client,Real Project,Real workspace row,completed,125') });
+  await page.getByRole('button', { name: 'Import work' }).click();
+  await page.goto('/demo');
+  await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
+  await page.getByRole('button', { name: 'Keep unbilled' }).first().click();
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await expect(page.getByRole('heading', { name: 'Real workspace row' })).toBeVisible();
+  const demoKeys = await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith('demo:')));
+  expect(demoKeys).toEqual([]);
+});
+
+test('@claim:free-core keeps imports, review, and checklist export available without a license', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.getByRole('button', { name: 'Save snapshots · paid' })).toBeVisible();
+  await page.getByRole('button', { name: 'Keep unbilled' }).first().click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export checklist CSV' }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe('invoice-draft-checklist.csv');
+});
+
+test('@claim:billing-boundary uses one Sociobot checkout link with no embedded payment form', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('One payment; no subscription.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Buy saved review tools' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout');
+  await expect(page.locator('iframe, input[name*="card" i], input[autocomplete="cc-number"]')).toHaveCount(0);
+});
+
+test('@claim:scope-boundaries keeps the sweep as a review and export tool', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'It does not send invoices' })).toBeVisible();
+  await expect(page.getByText('It does not track time, calculate tax, or change your source files.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /send invoice|calculate tax|track time/i })).toHaveCount(0);
+});
+
+test('the update action targets only the waiting worker', async () => {
+  const app = await readFile('src/main.ts', 'utf8');
+  expect(app).toContain('const worker = registration.waiting');
+  expect(app).toContain("if (!canAnnounceUpdate || !worker || !registration.active || registration.active === worker) return;");
+  expect(app).toContain('waitingServiceWorker.postMessage({ type: \'SKIP_WAITING\' })');
+  expect(app).not.toContain('navigator.serviceWorker.controller?.postMessage({ type: \'SKIP_WAITING\' })');
 });
 
 test('routes, keyboard landmarks, and serious accessibility issues pass', async ({ page }) => {

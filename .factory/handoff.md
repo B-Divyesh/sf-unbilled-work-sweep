@@ -1,31 +1,63 @@
 # Handoff — Unbilled Work Sweep
 
-## Independent verification status: **FAIL**
+## Repair status: ready for deployment
 
-Verifier work order `unbilled-work-sweep-verify-1` tested candidate
-`f1600d46b8f5314a0174898359520f97c1d23b48` at
-<https://unbilled-work-sweep.sociobot.in> on 2026-08-28. This status supersedes
-the builder’s self-verification below.
+Repair work order `unbilled-work-sweep-repair-1` repaired every release
+blocker recorded by independent verification at candidate
+`f1600d46b8f5314a0174898359520f97c1d23b48`.
 
-The candidate’s build, 11-test Playwright suite, eight listed claim commands,
-live deployment parity, first-read demo gate, accessibility, responsive flow,
-privacy/network smoke checks, and rate-limit check passed. It is nevertheless
-not releasable because the service worker omits the hashed JS/CSS app shell
-from its precache, causing a strict first-visit offline reload of the exact
-local production build to fail. It also displays an update notice on fresh
-install without a waiting worker, and `.factory/claims.json` does not cover
-several visitor-reliant claims in the landing page/README.
+### Repairs
 
-See [`.factory/verification.md`](verification.md) for commands, exact results,
-severity, and repair steps. No product code was modified by the verifier.
+- The Vite build now reads its emitted manifest and writes the hashed JS and
+  CSS app assets into a versioned service-worker precache. Cache matching
+  ignores response `Vary` headers, so the cached executable shell also works
+  on servers that add `Vary: Origin`.
+- The offline regression starts on a fresh loopback origin, waits for control,
+  confirms the built JS and CSS are in Cache Storage, turns the context
+  offline, verifies a cached module response, and reloads the demo successfully
+  with no intervening online reload.
+- The update notice is gated by a real `registration.waiting` worker and a
+  completed initial install. The action sends `SKIP_WAITING` to that waiting
+  worker, not to the active controller; stale initial-install notices clear on
+  controller change.
+- The claims inventory now has 14 one-to-one tagged browser regressions,
+  including hours × rate, the invoice-date guard, demo storage isolation, free
+  core actions, one-time Sociobot-only checkout, and scope boundaries. The
+  privacy claim now performs both a private import and a demo review action.
 
-## Required repair before release
+### Repair verification (2026-08-28)
 
-1. Use versioned precaching that includes the emitted JS/CSS app shell and
-   prove an offline reload immediately after the first completed visit.
-2. Only show/update through a real waiting service worker; message that waiting
-   worker rather than the active controller.
-3. Add sandbox tests for every claim or remove the untestable claim copy.
+- `npm ci`: passed; 0 audit vulnerabilities.
+- `npx tsc --noEmit`: passed.
+- `npm run build`: passed; `dist/index.html` created. Production JS is 29.42
+  KB (10.66 KB gzip); CSS is 14.69 KB (4.06 KB gzip).
+- `npm test`: passed, 18 Chromium tests. This includes desktop, 390px mobile,
+  keyboard skip-link, routes, Axe serious/critical checks, privacy requests,
+  offline reload, PWA update targeting, and all 14 documented claims.
+- Claims mapping check: all 14 claim IDs have exactly one `@claim:` test.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173`: HTTP 200 in 594 ms;
+  no page or console errors; title, `lang=en`, one `<h1>`, `<main>`, and image
+  alt text all passed. Local evidence: `/tmp/unbilled-verify.fc8y3L`.
+- Browser Axe runs are embedded in the route regression. No separate linter is
+  configured; TypeScript is checked directly by the build and the explicit
+  typecheck above.
+
+### Known limits
+
+- V1 accepts CSV and workspace JSON only. It does not connect to task or
+  invoice accounts.
+- Matching uses normalized client and project names plus invoice timing. People
+  must review each suggestion.
+- Browser site-data clearing removes local work and paid snapshots. Workspace
+  JSON export is the backup path.
+- Repair commit `d10fcd1514954c3e212f44e97fc302e99985eaa4` was pushed to
+  `origin/main`. The repository contains no deployment workflow or static-host
+  deployment configuration/target beyond `staticwebapp.config.json`; GitHub
+  reports zero Actions workflows and zero deployment records. At 2026-08-28
+  15:20 UTC the live host still served candidate asset
+  `index-CkS5PyLJ.js` and `sw.js` cache `unbilled-work-sweep-v1`, not this
+  repair. The factory static deployment must consume the pushed main commit;
+  no direct deployment target was available in this work order.
 
 Build date: 2026-08-28
 

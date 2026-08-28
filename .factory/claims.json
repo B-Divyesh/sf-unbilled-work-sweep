@@ -25,7 +25,7 @@
     "claim": "CSV rows and demo review actions stay on the device",
     "where": "landing facts, privacy, README",
     "test": "npm test -- --grep @claim:local-only",
-    "sandbox": "fresh demo; observe every request during review and assert that no request leaves the app origin"
+    "sandbox": "fresh browser context; import a private row, review demo work, and assert that no request leaves the app origin"
   },
   {
     "id": "offline-reload",
@@ -54,5 +54,47 @@
     "where": "landing paid section, README, terms",
     "test": "npm test -- --grep @claim:paid-license",
     "sandbox": "fresh browser context; assert checkout URL, mock a valid Sociobot verification response, and assert paid state"
+  },
+  {
+    "id": "hours-times-rate",
+    "claim": "When amount is missing, imports calculate it from hours multiplied by rate",
+    "where": "landing workspace, README",
+    "test": "npm test -- --grep @claim:hours-times-rate",
+    "sandbox": "fresh browser context; import a completed row with 2 hours and a $75 rate, then assert its $150 queue value"
+  },
+  {
+    "id": "invoice-date-guard",
+    "claim": "Invoices dated before the work are not suggested as matches",
+    "where": "README",
+    "test": "npm test -- --grep @claim:invoice-date-guard",
+    "sandbox": "fresh browser context; import one work row and an otherwise matching earlier invoice, then assert no suggestion"
+  },
+  {
+    "id": "demo-isolation",
+    "claim": "Demo data uses separate browser storage and is discarded when you start for real",
+    "where": "demo banner, privacy notice, README, demo contract",
+    "test": "npm test -- --grep @claim:demo-isolation",
+    "sandbox": "fresh browser context; retain a real row, review demo data, leave demo, then assert the real row remains and demo keys are gone"
+  },
+  {
+    "id": "free-core",
+    "claim": "Imports, review, and checklist exports stay free",
+    "where": "landing paid section, README",
+    "test": "npm test -- --grep @claim:free-core",
+    "sandbox": "fresh demo without a license; review a suggestion and download the checklist while snapshots remain marked paid"
+  },
+  {
+    "id": "billing-boundary",
+    "claim": "Saved review tools cost $19 once through Sociobot checkout; no payment form is embedded in the app",
+    "where": "landing paid section, README, terms",
+    "test": "npm test -- --grep @claim:billing-boundary",
+    "sandbox": "fresh browser context; assert the one-time copy, Sociobot checkout URL, and absence of payment iframes or card fields"
+  },
+  {
+    "id": "scope-boundaries",
+    "claim": "The sweep reviews exported records; it does not send invoices, track time, calculate tax, or change source files",
+    "where": "landing boundary section, README",
+    "test": "npm test -- --grep @claim:scope-boundaries",
+    "sandbox": "fresh browser context; assert the stated review boundary and the absence of invoice, time, and tax actions"
   }
 ]

@@ -19,6 +19,7 @@ let message = '';
 let error = '';
 let undoState: SweepState | null = null;
 let licensed = false;
+let waitingServiceWorker: ServiceWorker | null = null;
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char] ?? char);
 const formatMoney = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: state.currency || 'USD', maximumFractionDigits: 2 }).format(value);
@@ -244,7 +245,12 @@ async function action(name: string): Promise<void> {
     snapshots.unshift({ name: nameValue, date: new Date().toISOString().slice(0, 10), count: queue.length, value: queue.reduce((sum, work) => sum + work.amount, 0) });
     snapshotStore.setItem(snapshotKey, JSON.stringify(snapshots)); message = 'Sweep snapshot saved on this device.'; await render();
   }
-  if (name === 'apply-update') { navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' }); location.reload(); }
+  if (name === 'apply-update' && waitingServiceWorker) {
+    const reload = () => location.reload();
+    navigator.serviceWorker.addEventListener('controllerchange', reload, { once: true });
+    waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+    window.setTimeout(reload, 1500);
+  }
 }
 
 async function verifyLicense(token: string, announce = false): Promise<void> {
@@ -270,8 +276,49 @@ async function initLicense(): Promise<void> {
 
 function registerServiceWorker(): void {
   if (!('serviceWorker' in navigator)) return;
+  const readyKey = 'unbilled:service-worker-ready';
+  let canAnnounceUpdate = sessionStorage.getItem(readyKey) === '1';
+  void navigator.serviceWorker.ready.then(() => {
+    // Do not turn an app's first installation into a user-facing update.
+    // Later checks in this tab, and future visits in this browser tab, can
+    // announce a genuinely waiting replacement worker.
+    sessionStorage.setItem(readyKey, '1');
+    canAnnounceUpdate = true;
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // The initial worker may have briefly been observed as waiting. Once it
+    // claims this page, it is active rather than an available update.
+    waitingServiceWorker = null;
+    document.querySelector<HTMLElement>('#update-notice')?.setAttribute('hidden', '');
+  });
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').then((registration) => {
-    registration.addEventListener('updatefound', () => { const worker = registration.installing; worker?.addEventListener('statechange', () => { if (worker.state === 'installed' && navigator.serviceWorker.controller) document.querySelector<HTMLElement>('#update-notice')?.removeAttribute('hidden'); }); });
+    const showWaitingUpdate = () => {
+      const worker = registration.waiting;
+      // A waiting worker is an update only when an older worker is already
+      // active. The install worker itself can briefly appear as waiting.
+      if (!canAnnounceUpdate || !worker || !registration.active || registration.active === worker) return;
+      waitingServiceWorker = worker;
+      document.querySelector<HTMLElement>('#update-notice')?.removeAttribute('hidden');
+      // Do not leave a stale notice behind if the worker activates between
+      // the state-change callback and this paint.
+      window.setTimeout(() => {
+        if (registration.waiting === worker) return;
+        if (waitingServiceWorker === worker) waitingServiceWorker = null;
+        document.querySelector<HTMLElement>('#update-notice')?.setAttribute('hidden', '');
+      }, 250);
+    };
+    showWaitingUpdate();
+    registration.addEventListener('updatefound', () => {
+      const worker = registration.installing;
+      const announceThisWorker = canAnnounceUpdate;
+      worker?.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && announceThisWorker) {
+          // Initial installation briefly reports `installed` before it
+          // activates. A genuine upgrade remains waiting for an open client.
+          window.setTimeout(showWaitingUpdate, 100);
+        }
+      });
+    });
   }).catch(() => { /* The app still works without installation support. */ }));
 }
 
