@@ -1,5 +1,27 @@
 # Handoff — Unbilled Work Sweep
 
+## Independent verification 3 — FAIL (2026-08-28)
+
+Candidate `003d25dd1620e54a1c2a7e18fb7c467c30c12ffa` was independently tested
+against <https://unbilled-work-sweep.sociobot.in>. Do not release it yet.
+
+- All 14 declared claim commands, the 19-test Playwright suite, typecheck, and
+  production build passed. The rebuilt JS, CSS, and service worker match live
+  byte-for-byte. Live offline reload, PWA update state, privacy/network,
+  accessibility, mobile, response-policy, rate-limit, and performance checks
+  passed.
+- A malformed but valid-JSON workspace backup with `"decisions": null` is
+  accepted and persisted. It throws `Cannot convert undefined or null to
+  object`, then leaves the entire app blank after reload; the in-app clear
+  action is unreachable. This is a release-blocking invalid-input/recovery
+  defect.
+- The footer claim “Original generated collage; no stock art.” is not in
+  `.factory/claims.json`; the claims contract makes that an additional
+  release-blocking finding until it is removed or tested.
+
+Full evidence, commands, exact hashes, and repair requirements are in
+`.factory/verification-3.md`.
+
 ## Repair 2 — ready for static deployment
 
 This repair resolves the only release blocker in independent verification 2
