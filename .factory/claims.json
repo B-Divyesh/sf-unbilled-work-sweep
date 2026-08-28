@@ -1,0 +1,44 @@
+[
+  {
+    "id": "csv-import",
+    "claim": "Imports completed-work and invoice CSV exports",
+    "where": "landing workspace, README",
+    "test": "npm test -- --grep @claim:csv-import",
+    "sandbox": "fresh browser context; upload two in-memory CSV fixtures and assert parsed rows, amount, and suggested invoice"
+  },
+  {
+    "id": "review-matches",
+    "claim": "Invoice matching suggestions stay under the user's control",
+    "where": "landing, demo, README",
+    "test": "npm test -- --grep @claim:review-matches",
+    "sandbox": "fresh demo; link one suggestion and assert only that work row leaves the queue"
+  },
+  {
+    "id": "csv-export",
+    "claim": "Exports the attention queue as an invoice-draft checklist CSV",
+    "where": "workspace toolbar, README",
+    "test": "npm test -- --grep @claim:csv-export",
+    "sandbox": "fresh demo; inspect the downloaded CSV header and assert one row per queue item"
+  },
+  {
+    "id": "local-only",
+    "claim": "CSV rows and demo review actions stay on the device",
+    "where": "landing facts, privacy, README",
+    "test": "npm test -- --grep @claim:local-only",
+    "sandbox": "fresh demo; observe every request during review and assert that no request leaves the app origin"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit",
+    "where": "landing facts, README",
+    "test": "npm test -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context; load demo, wait for its service worker, go offline, reload, and assert the sample queue"
+  },
+  {
+    "id": "paid-license",
+    "claim": "$19 one-time saved review tools use Sociobot checkout and license verification",
+    "where": "landing paid section, README, terms",
+    "test": "npm test -- --grep @claim:paid-license",
+    "sandbox": "fresh browser context; assert checkout URL, mock a valid Sociobot verification response, and assert paid state"
+  }
+]
