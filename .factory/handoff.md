@@ -1,5 +1,27 @@
 # Handoff — Unbilled Work Sweep
 
+## Independent verification 4 — FAIL (2026-08-28)
+
+Candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d` was independently
+verified against <https://unbilled-work-sweep.sociobot.in>. **Do not release.**
+The deployed JS, CSS, and service-worker bytes match the candidate build;
+clean install, all 15 required claim commands, the 22-test Playwright suite,
+type check, build, privacy/PWA/rate-limit tests, and core product flows passed.
+
+Three High release blockers remain:
+
+- Live `/demo` skips from its h1 to h3 import-card headings (Axe
+  `heading-order`; Lighthouse accessibility 98 with this audit scoring 0).
+- The persistent **Reset demo** and **Start for real** controls are only
+  34.33px tall at 390px, below the mandatory 44px touch target.
+- **Link invoice** removes a work row from the queue with no Undo/Unlink
+  action, despite promising review control and telling users they can reset a
+  linked match.
+
+The full exact commands, evidence, claim table, live hashes, headers, PWA
+offline result, observed 30-request API allowance (429 + `Retry-After: 4`),
+and repair requirements are in `.factory/verification-4.md`.
+
 ## Repair 3 — deployed (2026-08-28)
 
 This repair addresses every release-blocking finding in independent verification
