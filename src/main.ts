@@ -3,6 +3,7 @@ import { mapInvoices, mappingFields, mapWork, parseCsv, suggestedMapping, toCsv 
 import { emptyState, queueFor, sampleState, suggestions } from './data';
 import { loadState, resetDemo, saveState } from './storage';
 import type { ImportKind, Mapping, ParsedCsv, SweepState, WorkItem } from './types';
+import { isSweepState } from './validation';
 
 const PRODUCT = 'unbilled-work-sweep';
 const LICENSE_KEY = `sb_license:${PRODUCT}`;
@@ -36,7 +37,7 @@ function header(): string {
 }
 
 function footer(): string {
-  return `<footer class="site-footer"><div><p class="footer-mark">Find completed work that still needs an invoice.</p><p>Original generated collage; no stock art.</p></div><nav aria-label="Footer navigation"><a href="/privacy" data-route>Privacy</a><a href="/terms" data-route>Terms</a><a href="https://hello-factory.sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external site)</span></a></nav><p>Version 1.0.0 · build 2026.08</p></footer>`;
+  return `<footer class="site-footer"><div><p class="footer-mark">Find completed work that still needs an invoice.</p><p>Artwork disclosure: generated for this product.</p></div><nav aria-label="Footer navigation"><a href="/privacy" data-route>Privacy</a><a href="/terms" data-route>Terms</a><a href="https://hello-factory.sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external site)</span></a></nav><p>Version 1.0.0 · build 2026.08</p></footer>`;
 }
 
 function demoBanner(): string {
@@ -217,10 +218,16 @@ function bindEvents(): void {
   document.querySelector<HTMLInputElement>('#import-workspace')?.addEventListener('change', async (event) => {
     const file = (event.currentTarget as HTMLInputElement).files?.[0]; if (!file) return;
     try {
-      const value = JSON.parse(await file.text()) as SweepState;
-      if (!Array.isArray(value.work) || !Array.isArray(value.invoices) || typeof value.decisions !== 'object' || typeof value.checked !== 'object') throw new Error();
-      value.currency = ['USD', 'GBP', 'EUR', 'CAD', 'AUD'].includes(value.currency) ? value.currency : 'USD';
-      state = value; await persistAndRender('Workspace imported.');
+      const value: unknown = JSON.parse(await file.text());
+      if (!isSweepState(value)) throw new Error('Invalid workspace backup');
+      const imported = structuredClone(value);
+      imported.importedAt = new Date().toISOString();
+      // Commit first. A bad file or a failed write must leave the rendered and
+      // persisted workspace alone so its recovery controls remain reachable.
+      await saveState(imported, isDemo);
+      state = imported;
+      message = 'Workspace imported.'; error = '';
+      await render();
     }
     catch { error = 'That workspace file is not valid. Choose an exported workspace JSON file.'; await render(); }
   });

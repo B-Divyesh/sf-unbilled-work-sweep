@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
+import { sampleState } from '../src/data';
+import { isSweepState } from '../src/validation';
 
 test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) => {
   await page.goto('/');
@@ -174,6 +176,51 @@ test('@claim:scope-boundaries keeps the sweep as a review and export tool', asyn
   await expect(page.getByRole('heading', { name: 'It does not send invoices' })).toBeVisible();
   await expect(page.getByText('It does not track time, calculate tax, or change your source files.')).toBeVisible();
   await expect(page.getByRole('button', { name: /send invoice|calculate tax|track time/i })).toHaveCount(0);
+});
+
+test('@claim:art-disclosure discloses generated product artwork in the footer', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('footer')).toContainText('Artwork disclosure: generated for this product.');
+});
+
+test('a malformed workspace backup is rejected without replacing or bricking the saved workspace', async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error));
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'valid-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Site,Safe workspace row,completed,125')
+  });
+  await page.getByRole('button', { name: 'Import work' }).click();
+  await expect(page.getByRole('heading', { name: 'Safe workspace row' })).toBeVisible();
+  await page.locator('#import-workspace').setInputFiles({
+    name: 'malformed-workspace.json', mimeType: 'application/json',
+    buffer: Buffer.from('{"work":[],"invoices":[],"decisions":null,"checked":{},"currency":"USD","importedAt":null}')
+  });
+  await expect(page.getByRole('alert')).toHaveText('That workspace file is not valid. Choose an exported workspace JSON file.');
+  await expect(page.getByRole('heading', { name: 'Safe workspace row' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Safe workspace row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('125');
+  expect(pageErrors).toEqual([]);
+});
+
+test('workspace backup validation rejects malformed nested records and fields', () => {
+  const valid = sampleState();
+  valid.decisions = { 'w-bright-1': { kind: 'linked', invoiceId: 'i-bright-1' }, 'w-north-1': { kind: 'keep' } };
+  valid.checked = { 'w-bright-1': true };
+  expect(isSweepState(valid)).toBe(true);
+
+  const malformed: unknown[] = [
+    { ...valid, decisions: null },
+    { ...valid, decisions: { 'w-bright-1': { kind: 'linked', invoiceId: 42 } } },
+    { ...valid, checked: { 'w-bright-1': 'yes' } },
+    { ...valid, work: [{ ...valid.work[0], amount: '125' }] },
+    { ...valid, invoices: [{ ...valid.invoices[0], status: false }] },
+    { ...valid, currency: 'JPY' },
+    { ...valid, importedAt: 42 }
+  ];
+  malformed.forEach((backup) => expect(isSweepState(backup)).toBe(false));
 });
 
 test('the update action targets only the waiting worker', async () => {

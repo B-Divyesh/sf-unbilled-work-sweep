@@ -49,7 +49,7 @@ Audit date: 2026-08-28. Counts treat hyphenated terms and prices as one word. UI
 | Paste it here. | 3 | Pass |
 | Buying means you accept the terms and privacy notice. | 9 | Pass |
 | Find completed work that still needs an invoice. | 8 | Pass |
-| Original generated collage; no stock art. | 6 | Pass |
+| Artwork disclosure: generated for this product. | 6 | Pass |
 
 No sentence exceeds 22 words. No banned word appears.
 

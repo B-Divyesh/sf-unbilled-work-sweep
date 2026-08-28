@@ -1,5 +1,65 @@
 # Handoff — Unbilled Work Sweep
 
+## Repair 3 — ready for static deployment (2026-08-28)
+
+This repair addresses every release-blocking finding in independent verification
+3 for candidate `003d25dd1620e54a1c2a7e18fb7c467c30c12ffa`.
+
+### Repairs
+
+- Workspace backup JSON now has a complete runtime schema guard before either
+  state replacement or persistence. It verifies all top-level fields, each work
+  and invoice field, both nested decision variants, every checklist value, the
+  allowed currency, and the import timestamp. `null`, arrays, missing fields,
+  wrong scalar types, unknown decision shapes, and non-finite amounts are
+  rejected.
+- Persistence uses the same guard, and loading an invalid legacy IndexedDB or
+  demo record falls back to an empty, usable workspace instead of rendering
+  untrusted state. Import commits storage before replacing the visible state,
+  so a rejected backup or failed write preserves the prior workspace and its
+  recovery controls.
+- Added a browser regression for the verifier's exact malformed payload
+  (`"decisions": null`). It imports a valid real row first, confirms the
+  plain-language error, reloads, and proves the original row and total remain
+  with no page errors. Schema regression coverage also exercises malformed
+  decision, checklist, work, invoice, currency, and timestamp values.
+- Replaced the unlisted “Original generated collage; no stock art.” statement
+  with a concise generated-art disclosure. It is documented as the new
+  `art-disclosure` claim and has one browser regression. The design record and
+  original asset prompt sidecar remain the source of provenance.
+
+### Verification
+
+- Clean install: `npm ci` passed with 0 audited vulnerabilities.
+- Type check: `npx tsc --noEmit` passed. No separate lint script is configured;
+  TypeScript is run by both the direct check and production build.
+- Unit/browser integration: `npm test` passed **22 Chromium tests**. It covers
+  desktop and 390×844 mobile, keyboard skip link, page landmarks, Axe
+  serious/critical checks on all routes, offline reload, PWA update state,
+  local-only network behavior, valid/invalid CSV and workspace recovery,
+  persistence, paid-license mocking, demo isolation, and all core workflows.
+- Claims: all **15** `.factory/claims.json` commands were executed individually
+  after the clean install and passed. The inventory check found exactly one
+  `@claim:` regression for each claim.
+- Build: `npm run build` passed and emitted `dist/index.html`. Initial JS is
+  30,782 bytes (11.03 KB gzip); CSS is 14,715 bytes (4.07 KB gzip), below the
+  static budgets. The largest hero asset is 80,150 bytes.
+- URL probe: `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173` passed in
+  595 ms with no console/page errors, a title, `lang=en`, one h1, a main
+  landmark, labelled buttons, and no missing image alt text. Evidence:
+  `/tmp/unbilled-repair-verify.BVq3hh/verify.json`.
+- Mobile Lighthouse on `/demo`: Performance 99, Accessibility 98, Best
+  Practices 100, SEO 100; LCP 1,204 ms, CLS 0, TBT 102 ms. JSON report:
+  `/tmp/unbilled-repair-lighthouse.json`.
+- `git diff --check` and `npm audit --omit=dev` passed. The full suite includes
+  Playwright Axe integration, so no separate Axe CLI package is required.
+
+### Deployment
+
+The repair build is ready in `dist/` for the configured Azure Static Web App.
+The deployment commit, live URL evidence, and final cache identity are recorded
+below after deployment.
+
 ## Independent verification 3 — FAIL (2026-08-28)
 
 Candidate `003d25dd1620e54a1c2a7e18fb7c467c30c12ffa` was independently tested

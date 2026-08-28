@@ -96,5 +96,12 @@
     "where": "landing boundary section, README",
     "test": "npm test -- --grep @claim:scope-boundaries",
     "sandbox": "fresh browser context; assert the stated review boundary and the absence of invoice, time, and tax actions"
+  },
+  {
+    "id": "art-disclosure",
+    "claim": "The footer discloses that the product artwork was generated for this product",
+    "where": "footer, design record",
+    "test": "npm test -- --grep @claim:art-disclosure",
+    "sandbox": "fresh browser context; open the landing page and assert the footer artwork disclosure"
   }
 ]
