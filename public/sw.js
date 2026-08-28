@@ -1,5 +1,5 @@
 const CACHE = 'unbilled-work-sweep-v1';
-const SHELL = ['/', '/demo', '/privacy', '/terms', '/offline.html', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/assets/paperwork-garden-720.webp', '/assets/paperwork-garden-1200.webp'];
+const SHELL = ['/', '/demo', '/privacy', '/terms', '/offline.html', '/fallback.css', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/assets/paperwork-garden-720.webp', '/assets/paperwork-garden-1200.webp'];
 
 self.addEventListener('install', (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL))));
 self.addEventListener('activate', (event) => event.waitUntil(Promise.all([caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))), self.clients.claim()])));

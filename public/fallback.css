@@ -1,0 +1,5 @@
+body { margin: 0; background: #101927; color: #fff9ea; font: 18px/1.5 system-ui, sans-serif; padding: 12vh 8vw; }
+main { max-width: 46rem; }
+h1 { font: 700 clamp(2.5rem, 8vw, 5rem)/.95 Georgia, serif; }
+a { color: #ffd1c8; }
+a.button { display: inline-block; color: #101927; background: #fff9ea; padding: 14px 20px; border: 3px solid #fff9ea; box-shadow: 6px 6px #c9473d; font-weight: 700; }

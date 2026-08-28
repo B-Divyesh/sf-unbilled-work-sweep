@@ -39,4 +39,7 @@ export async function saveState(state: SweepState, demo: boolean): Promise<void>
   });
 }
 
-export function resetDemo(): void { sessionStorage.removeItem(DEMO_KEY); }
+export function resetDemo(): void {
+  sessionStorage.removeItem(DEMO_KEY);
+  sessionStorage.removeItem('demo:unbilled:snapshots');
+}

@@ -99,11 +99,13 @@ function workspace(): string {
     ${hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Attention queue</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
       <div class="toolbar"><label>Currency<select id="currency" aria-label="Display currency"><option ${state.currency === 'USD' ? 'selected' : ''}>USD</option><option ${state.currency === 'GBP' ? 'selected' : ''}>GBP</option><option ${state.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${state.currency === 'CAD' ? 'selected' : ''}>CAD</option><option ${state.currency === 'AUD' ? 'selected' : ''}>AUD</option></select></label><div><button data-action="export-checklist" ${queue.length ? '' : 'disabled'}>Export checklist CSV</button><button class="ghost" data-action="export-workspace">Export workspace</button><label class="ghost buttonish" for="import-workspace">Import workspace</label><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"></div></div>
       ${queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><h3>No completed work needs attention</h3><p>Import more work, or reset a linked match to bring it back.</p></div>`}
-      <div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><h3>Your attention queue will appear here</h3><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p></div>`}</div>`;
+      <div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><h3>Your attention queue will appear here</h3><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"></div>`}</div>`;
 }
 
 function snapshotList(): string {
-  const snapshots = JSON.parse(localStorage.getItem('unbilled:snapshots') ?? '[]') as { name: string; date: string; count: number; value: number }[];
+  const snapshotStore = isDemo ? sessionStorage : localStorage;
+  const snapshotKey = isDemo ? 'demo:unbilled:snapshots' : 'unbilled:snapshots';
+  const snapshots = JSON.parse(snapshotStore.getItem(snapshotKey) ?? '[]') as { name: string; date: string; count: number; value: number }[];
   if (!snapshots.length || !licensed) return '';
   return `<section class="snapshots" aria-labelledby="snapshot-title"><h3 id="snapshot-title">Saved sweep snapshots</h3><ul>${snapshots.map((item) => `<li><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.date)} · ${item.count} items · ${formatMoney(item.value)}</span></li>`).join('')}</ul></section>`;
 }
@@ -141,7 +143,7 @@ async function render(focus = false): Promise<void> {
   const path = currentPath();
   isDemo = path === '/demo' || new URLSearchParams(location.search).get('demo') === '1';
   setMeta(isDemo ? '/demo' : path);
-  app.innerHTML = path === '/' ? homePage() : isDemo ? demoPage() : path === '/privacy' ? legalPage('privacy') : path === '/terms' ? legalPage('terms') : notFoundPage();
+  app.innerHTML = isDemo ? demoPage() : path === '/' ? homePage() : path === '/privacy' ? legalPage('privacy') : path === '/terms' ? legalPage('terms') : notFoundPage();
   bindEvents();
   if (focus) requestAnimationFrame(() => document.querySelector<HTMLElement>('h1')?.focus());
 }
@@ -153,7 +155,9 @@ async function navigate(path: string): Promise<void> {
   state = await loadState(isDemo);
   if (isDemo && state.work.length === 0) { state = sampleState(); await saveState(state, true); }
   await render(true);
-  scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  if (location.hash) document.querySelector(location.hash)?.scrollIntoView({ behavior });
+  else scrollTo({ top: 0, behavior });
 }
 
 function download(name: string, content: string, type: string): void {
@@ -211,7 +215,12 @@ function bindEvents(): void {
   document.querySelectorAll<HTMLElement>('[data-action]').forEach((button) => button.addEventListener('click', () => void action(button.dataset.action ?? '')));
   document.querySelector<HTMLInputElement>('#import-workspace')?.addEventListener('change', async (event) => {
     const file = (event.currentTarget as HTMLInputElement).files?.[0]; if (!file) return;
-    try { const value = JSON.parse(await file.text()) as SweepState; if (!Array.isArray(value.work) || !Array.isArray(value.invoices)) throw new Error(); state = value; await persistAndRender('Workspace imported.'); }
+    try {
+      const value = JSON.parse(await file.text()) as SweepState;
+      if (!Array.isArray(value.work) || !Array.isArray(value.invoices) || typeof value.decisions !== 'object' || typeof value.checked !== 'object') throw new Error();
+      value.currency = ['USD', 'GBP', 'EUR', 'CAD', 'AUD'].includes(value.currency) ? value.currency : 'USD';
+      state = value; await persistAndRender('Workspace imported.');
+    }
     catch { error = 'That workspace file is not valid. Choose an exported workspace JSON file.'; await render(); }
   });
 }
@@ -230,9 +239,10 @@ async function action(name: string): Promise<void> {
   if (name === 'save-snapshot') {
     if (!licensed) { if (currentPath() === '/') document.querySelector('#paid')?.scrollIntoView({ behavior: 'smooth' }); else await navigate('/#paid'); return; }
     const nameValue = prompt('Name this sweep snapshot', `Week of ${new Date().toLocaleDateString()}`); if (!nameValue) return;
-    const queue = queueFor(state); const snapshots = JSON.parse(localStorage.getItem('unbilled:snapshots') ?? '[]') as unknown[];
+    const queue = queueFor(state); const snapshotStore = isDemo ? sessionStorage : localStorage; const snapshotKey = isDemo ? 'demo:unbilled:snapshots' : 'unbilled:snapshots';
+    const snapshots = JSON.parse(snapshotStore.getItem(snapshotKey) ?? '[]') as unknown[];
     snapshots.unshift({ name: nameValue, date: new Date().toISOString().slice(0, 10), count: queue.length, value: queue.reduce((sum, work) => sum + work.amount, 0) });
-    localStorage.setItem('unbilled:snapshots', JSON.stringify(snapshots)); message = 'Sweep snapshot saved on this device.'; await render();
+    snapshotStore.setItem(snapshotKey, JSON.stringify(snapshots)); message = 'Sweep snapshot saved on this device.'; await render();
   }
   if (name === 'apply-update') { navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' }); location.reload(); }
 }

@@ -5,5 +5,5 @@
 - Try: review Brightside or Morrow as linked, keep a suggestion unbilled, mark a checklist item, and export the CSV.
 - Reset: use **Reset demo** in the persistent banner.
 - Leave: use **Start for real**. This clears the demo namespace before opening the real workspace.
-- Storage: demo actions use `sessionStorage` key `demo:unbilled-work-sweep`. The demo never reads or writes the real IndexedDB database.
+- Storage: demo actions use `sessionStorage` keys prefixed with `demo:`. The demo never reads or writes the real IndexedDB database or real snapshot storage.
 - Offline: visit once, wait for the app shell to load, then use the demo without a network connection.

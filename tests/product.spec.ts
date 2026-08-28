@@ -6,18 +6,18 @@ test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) 
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({
     name: 'work.csv', mimeType: 'text/csv',
-    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Site,Build page,completed,100\n2026-08-02,Acme,Site,Call,in progress,50')
+    buffer: Buffer.from('date,client,project,description,status,amount,hours,rate\n2026-08-01,Acme,Site,Build page,completed,100,,\n2026-08-02,Acme,Site,Call,in progress,50,,\n2026-08-03,Acme,Site,Research,completed,,2,75')
   });
   await page.getByRole('button', { name: 'Import work' }).click();
-  await expect(page.getByText('2 work rows imported.')).toBeVisible();
+  await expect(page.getByText('3 work rows imported.')).toBeVisible();
   await page.locator('#file-invoices').setInputFiles({
     name: 'invoices.csv', mimeType: 'text/csv',
     buffer: Buffer.from('invoice date,invoice number,client,project,status\n2026-08-03,INV-1,Acme,Site,sent')
   });
   await page.getByRole('button', { name: 'Import invoices' }).click();
   await expect(page.getByText('1 invoice rows imported.')).toBeVisible();
-  await expect(page.getByTestId('queue-total')).toContainText('100');
-  await expect(page.getByText('Possible invoice:')).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('250');
+  await expect(page.getByText('Possible invoice:').first()).toBeVisible();
 });
 
 test('@claim:review-matches keeps suggestions under user control', async ({ page }) => {
@@ -75,6 +75,33 @@ test('@claim:paid-license uses the Sociobot checkout and verification contract',
   await page.getByRole('button', { name: 'Verify license' }).click();
   await expect(page.getByText('License verified. Saved review tools are active.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'License active' })).toBeVisible();
+  await page.goto('/demo');
+  page.once('dialog', (dialog) => dialog.accept('Friday sweep'));
+  await page.getByRole('button', { name: 'Save named snapshot' }).click();
+  await expect(page.getByText('Friday sweep')).toBeVisible();
+  await expect(page.locator('.snapshots').getByText(/4 items/)).toBeVisible();
+});
+
+test('@claim:local-persistence keeps a real workspace after reload', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({ name: 'saved.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Site,Saved task,completed,125') });
+  await page.getByRole('button', { name: 'Import work' }).click();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Saved task' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('125');
+});
+
+test('@claim:workspace-backup exports and restores the full workspace', async ({ page }) => {
+  await page.goto('/demo');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export workspace' }).click();
+  const backup = await downloadPromise;
+  const backupPath = await backup.path();
+  expect(backupPath).not.toBeNull();
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await page.locator('#import-workspace').setInputFiles(backupPath!);
+  await expect(page.getByText('Workspace imported.')).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('5,840');
 });
 
 test('routes, keyboard landmarks, and serious accessibility issues pass', async ({ page }) => {
@@ -87,6 +114,19 @@ test('routes, keyboard landmarks, and serious accessibility issues pass', async 
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
   }
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#main')).toBeVisible();
+});
+
+test('query demo entry and invalid CSV error state work', async ({ page }) => {
+  await page.goto('/?demo=1');
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await page.locator('#file-work').setInputFiles({ name: 'broken.csv', mimeType: 'text/csv', buffer: Buffer.from('only-one-header\nvalue') });
+  await expect(page.getByRole('alert')).toContainText('header row and at least one data row');
 });
 
 test('the 390px layout stays inside the viewport', async ({ page }) => {

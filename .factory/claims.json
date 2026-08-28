@@ -35,6 +35,20 @@
     "sandbox": "fresh browser context; load demo, wait for its service worker, go offline, reload, and assert the sample queue"
   },
   {
+    "id": "local-persistence",
+    "claim": "Real workspace data stays in IndexedDB across a reload",
+    "where": "README, workspace",
+    "test": "npm test -- --grep @claim:local-persistence",
+    "sandbox": "fresh browser context; import one real work row, reload, and assert its description and amount remain"
+  },
+  {
+    "id": "workspace-backup",
+    "claim": "Exports and imports a complete workspace JSON backup",
+    "where": "workspace toolbar, README",
+    "test": "npm test -- --grep @claim:workspace-backup",
+    "sandbox": "fresh demo; download the sample workspace, enter the empty real workspace, restore the file, and assert its total"
+  },
+  {
     "id": "paid-license",
     "claim": "$19 one-time saved review tools use Sociobot checkout and license verification",
     "where": "landing paid section, README, terms",
