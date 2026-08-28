@@ -1,6 +1,6 @@
 # Handoff — Unbilled Work Sweep
 
-## Repair 3 — ready for static deployment (2026-08-28)
+## Repair 3 — deployed (2026-08-28)
 
 This repair addresses every release-blocking finding in independent verification
 3 for candidate `003d25dd1620e54a1c2a7e18fb7c467c30c12ffa`.
@@ -54,11 +54,26 @@ This repair addresses every release-blocking finding in independent verification
 - `git diff --check` and `npm audit --omit=dev` passed. The full suite includes
   Playwright Axe integration, so no separate Axe CLI package is required.
 
-### Deployment
+### Deployment and live identity
 
-The repair build is ready in `dist/` for the configured Azure Static Web App.
-The deployment commit, live URL evidence, and final cache identity are recorded
-below after deployment.
+- Repair commit `3aed75e26f099754b9478f279aef6215debb232e` was pushed to
+  `origin/main` and deployed with the factory configuration:
+  `/opt/fleet/lib/deploy-static.sh unbilled-work-sweep ./dist`.
+- The helper reused the production Azure Static Web App
+  `sf-unbilled-work-sweep` in Central US, uploaded the 349,507-byte app
+  artifact, completed deployment `e156a3a1-d0aa-4929-99fa-8c73c56c55a4`, and
+  confirmed the configured custom domain is ready over TLS.
+- Live identity is the repair build. The landing HTML references
+  `index-BBJxQqFl.js` and `index-BQM5jbYv.css`; live `sw.js` cache
+  `unbilled-work-sweep-ffa5f69aa991` precaches those exact assets.
+- Live `verify-url.sh` passed in 843 ms with no console/page errors and all
+  baseline title, language, h1, main, labels, and alt checks. Evidence:
+  `/tmp/unbilled-repair-live-final.T67X0o/verify.json`. The live response has
+  HSTS, `nosniff`, strict-origin referrer policy, permissions policy, and the
+  configured CSP limiting connections to same-origin and Sociobot licensing.
+- A clean live Chromium context imported a valid row, rejected the verifier's
+  malformed backup, reloaded with the valid row intact, then completed an
+  offline `/demo` reload under an active service worker without page errors.
 
 ## Independent verification 3 — FAIL (2026-08-28)
 
