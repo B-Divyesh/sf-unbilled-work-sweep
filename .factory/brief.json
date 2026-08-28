@@ -1,0 +1,11 @@
+{
+  "slug": "unbilled-work-sweep",
+  "title": "Unbilled Work Sweep",
+  "summary": "Find completed work that still needs an invoice.",
+  "territory": "utilities",
+  "artifact_class": "pwa-offline",
+  "user": "A freelancer or tiny agency that records tasks or time in more than one tool and needs a weekly, local view of completed work that has not yet reached an invoice.",
+  "smallest_useful_product": "Local CSV importer for task/time/invoice exports that matches client/project names, lists unmatched completed work, and produces an invoice-draft checklist.",
+  "monetization": "one-time",
+  "constraints": "All imports stay on-device; matching suggestions must be reviewable; do not infer taxable income or alter source records."
+}
