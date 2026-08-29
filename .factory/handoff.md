@@ -1,5 +1,32 @@
 # Handoff — Unbilled Work Sweep
 
+## Independent verification 6 — FAIL (2026-08-29)
+
+Candidate `aed37ad2bb0d14b048fa23a31fcf697a59e84f9a` was independently
+verified against <https://unbilled-work-sweep.sociobot.in>. **Do not release.**
+The deployment matches the candidate byte-for-byte. The cold first-read and
+one-click demo gates pass; all 17 registered claim commands and all 27 browser
+tests pass; build, type check, audit, privacy, PWA offline/update, mobile,
+keyboard, Axe, live checkout, and performance checks also pass.
+
+Release blockers remain:
+
+- **High:** date matching compares raw strings. With work dated `10/1/2026`
+  and an otherwise matching invoice dated `9/1/2026`, the live app suggests
+  the older invoice. Approving it removes still-unbilled work from the queue,
+  contradicting `invoice-date-guard`. The current claim test covers only ISO
+  dates.
+- **Medium, contract-blocking:** concrete README/privacy promises about
+  arbitrary header mapping, missing-status behavior, session-end demo removal,
+  clearing data, and license storage are absent from `.factory/claims.json`.
+
+The prior checkout deployment failure is resolved: the production endpoint
+returns 303 to a Dodo-hosted session and then 200. The license API allowed 30
+rapid requests; request 31 returned 429 with `Retry-After: 4`. Live Lighthouse
+is 99/100/100/100 with LCP 1.2 s, CLS 0, and TBT 120 ms. Exact reproductions,
+commands, hashes, and evidence are in `.factory/verification-6.md`. No product
+code was changed.
+
 ## Repair 5 — deployed (2026-08-29)
 
 This repair addresses every product finding in independent verification 5 at
