@@ -461,6 +461,15 @@ test('demo heading order and persistent controls meet the accessibility contract
   }
 });
 
+test('row entrance motion preserves text contrast throughout the animation', async ({ page }) => {
+  await page.goto('/demo');
+  await page.locator('.work-slip').first().waitFor();
+  await page.addStyleTag({ content: '.work-slip { animation: place-row 220ms ease -110ms paused both !important; }' });
+  await expect(page.locator('.work-slip').first()).toHaveCSS('opacity', '1');
+  const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+  expect(results.violations).toEqual([]);
+});
+
 test('keyboard focus is visibly transferred to all three file chooser labels at 390px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/demo');
