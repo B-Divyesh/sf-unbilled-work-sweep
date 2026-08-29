@@ -33,6 +33,8 @@ words. No banned word appears.
 | Dates must use YYYY-MM-DD or M/D/YYYY. | 6 | Pass |
 | This will replace only [source] after you confirm. | 8 | Pass — `multi-source-import` claim |
 | hours multiplied by rate must produce a finite amount | 9 | Pass |
+| 1 work row imported. | 4 | Pass |
+| 1 invoice row imported. | 4 | Pass |
 | 1 prior review decision was cleared because that work changed. | 11 | Pass |
 | Your unbilled-work list will appear here | 6 | Pass |
 | Import completed work first. | 4 | Pass |

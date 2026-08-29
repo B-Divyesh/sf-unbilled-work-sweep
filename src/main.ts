@@ -82,9 +82,9 @@ function importCard(kind: ImportKind): string {
       const inputId = `replace-work-source-${index}`;
       return `<li><span><strong>${escapeHtml(source.name)}</strong><small>${sourceCount} ${sourceCount === 1 ? 'row' : 'rows'}</small></span><input class="visually-hidden-file" id="${inputId}" data-file-kind="work" data-replace-source="${escapeHtml(source.id)}" type="file" accept=".csv,text/csv"><label class="source-replace" for="${inputId}">Replace this source<span class="sr-only">: ${escapeHtml(source.name)}</span></label></li>`;
     }).join('');
-    return `<div class="import-card work-import-card ${count ? 'has-data' : ''}" data-drop-kind="work"><div class="import-card-copy"><span class="file-number">01</span><p class="import-title">Completed work CSVs</p><p>${count ? `${state.workSources.length} ${state.workSources.length === 1 ? 'source' : 'sources'} · ${count} rows imported` : 'Add one export from each task or time tool.'}</p>${sources ? `<ul class="source-list" aria-label="Completed-work sources">${sources}</ul>` : ''}</div><input class="visually-hidden-file" id="file-work" data-file-kind="work" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-work">${count ? 'Add another export' : 'Choose completed work CSV'}</label></div>`;
+    return `<div class="import-card work-import-card ${count ? 'has-data' : ''}" data-drop-kind="work"><div class="import-card-copy"><span class="file-number">01</span><p class="import-title">Completed work CSVs</p><p>${count ? `${state.workSources.length} ${state.workSources.length === 1 ? 'source' : 'sources'} · ${count} ${count === 1 ? 'row' : 'rows'} imported` : 'Add one export from each task or time tool.'}</p>${sources ? `<ul class="source-list" aria-label="Completed-work sources">${sources}</ul>` : ''}</div><input class="visually-hidden-file" id="file-work" data-file-kind="work" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-work">${count ? 'Add another export' : 'Choose completed work CSV'}</label></div>`;
   }
-  return `<div class="import-card ${count ? 'has-data' : ''}" data-drop-kind="invoices"><div><span class="file-number">02</span><p class="import-title">Invoices CSV</p><p>${count ? `${count} rows imported` : 'Issued or draft invoices with client and project names.'}</p></div><input class="visually-hidden-file" id="file-invoices" data-file-kind="invoices" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-invoices">${count ? 'Replace invoices' : 'Choose invoices CSV'}</label></div>`;
+  return `<div class="import-card ${count ? 'has-data' : ''}" data-drop-kind="invoices"><div><span class="file-number">02</span><p class="import-title">Invoices CSV</p><p>${count ? `${count} ${count === 1 ? 'row' : 'rows'} imported` : 'Issued or draft invoices with client and project names.'}</p></div><input class="visually-hidden-file" id="file-invoices" data-file-kind="invoices" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-invoices">${count ? 'Replace invoices' : 'Choose invoices CSV'}</label></div>`;
 }
 
 function mappingPanel(): string {
@@ -92,7 +92,8 @@ function mappingPanel(): string {
   const replacing = pending.kind === 'work' && pending.replaceSourceId;
   const source = replacing ? state.workSources.find((item) => item.id === pending?.replaceSourceId) : undefined;
   const replacementNote = source ? ` This will replace only ${escapeHtml(source.name)} after you confirm.` : '';
-  return `<section class="mapping-panel" aria-labelledby="mapping-title"><div><p class="eyebrow">Column check</p><h2 id="mapping-title">Map ${pending.kind === 'work' ? 'completed work' : 'invoice'} columns</h2><p>${escapeHtml(pending.csv.filename)} · ${pending.csv.rows.length} rows. Required fields are marked. Dates must use YYYY-MM-DD or M/D/YYYY.${replacementNote}</p></div><form id="mapping-form"><div class="mapping-grid">${mappingFields(pending.kind).map((field) => `<label>${field.label}${field.required ? ' *' : ''}<select name="${field.key}" ${field.required ? 'required' : ''}><option value="">Not included</option>${pending?.csv.headers.map((header) => `<option value="${escapeHtml(header)}" ${pending?.mapping[field.key] === header ? 'selected' : ''}>${escapeHtml(header)}</option>`).join('')}</select></label>`).join('')}</div><div class="form-actions"><button type="button" class="button ghost" data-action="cancel-mapping">Cancel</button><button class="button primary" type="submit">${source ? 'Replace source' : `Import ${pending.kind === 'work' ? 'work' : 'invoices'}`}</button></div></form></section>`;
+  const rowCount = pending.csv.rows.length;
+  return `<section class="mapping-panel" aria-labelledby="mapping-title"><div><p class="eyebrow">Column check</p><h2 id="mapping-title">Map ${pending.kind === 'work' ? 'completed work' : 'invoice'} columns</h2><p>${escapeHtml(pending.csv.filename)} · ${rowCount} ${rowCount === 1 ? 'row' : 'rows'}. Required fields are marked. Dates must use YYYY-MM-DD or M/D/YYYY.${replacementNote}</p></div><form id="mapping-form"><div class="mapping-grid">${mappingFields(pending.kind).map((field) => `<label>${field.label}${field.required ? ' *' : ''}<select name="${field.key}" ${field.required ? 'required' : ''}><option value="">Not included</option>${pending?.csv.headers.map((header) => `<option value="${escapeHtml(header)}" ${pending?.mapping[field.key] === header ? 'selected' : ''}>${escapeHtml(header)}</option>`).join('')}</select></label>`).join('')}</div><div class="form-actions"><button type="button" class="button ghost" data-action="cancel-mapping">Cancel</button><button class="button primary" type="submit">${source ? 'Replace source' : `Import ${pending.kind === 'work' ? 'work' : 'invoices'}`}</button></div></form></section>`;
 }
 
 function workRow(work: WorkItem): string {
@@ -306,11 +307,12 @@ function bindEvents(): void {
       }
       const count = pending.kind === 'work' ? pending.csv.rows.length - duplicates : pending.csv.rows.length;
       const noun = pending.kind === 'work' ? 'work' : 'invoice';
+      const importedRows = `${count} ${noun} ${count === 1 ? 'row' : 'rows'} imported.`;
       const cleared = clearedLinks ? ` ${clearedLinks} stale invoice ${clearedLinks === 1 ? 'link' : 'links'} cleared.` : '';
       const discarded = clearedReviews ? ` ${clearedReviews} prior ${clearedReviews === 1 ? 'review decision was' : 'review decisions were'} cleared because that work changed.` : '';
       const duplicateNotice = duplicates ? ` ${duplicates} exact duplicate ${duplicates === 1 ? 'row was' : 'rows were'} skipped.` : '';
       pending = null;
-      void persistAndRender(`${count} ${noun} rows imported.${workSourceAction}${duplicateNotice}${cleared}${discarded}`);
+      void persistAndRender(`${importedRows}${workSourceAction}${duplicateNotice}${cleared}${discarded}`);
     } catch (caught) {
       error = caught instanceof Error ? caught.message : 'The CSV rows could not be imported. Fix the file and try again.';
       message = '';

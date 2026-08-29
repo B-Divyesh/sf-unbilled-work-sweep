@@ -53,7 +53,7 @@ test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) 
     buffer: Buffer.from('invoice date,invoice number,client,project,status\n2026-08-03,INV-1,Acme,Site,sent')
   });
   await page.getByRole('button', { name: 'Import invoices' }).click();
-  await expect(page.getByText('1 invoice rows imported.')).toBeVisible();
+  await expect(page.getByText('1 invoice row imported.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('250');
   await expect(page.getByText('Possible invoice:').first()).toBeVisible();
 });
@@ -118,7 +118,7 @@ test('@claim:header-mapping imports manually mapped columns with unrelated heade
   await page.locator('select[name="description"]').selectOption('details');
   await page.locator('select[name="amount"]').selectOption('value');
   await page.getByRole('button', { name: 'Import work', exact: true }).click();
-  await expect(page.getByText('1 work rows imported.')).toBeVisible();
+  await expect(page.getByText('1 work row imported.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Custom header row' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('275');
 
@@ -131,7 +131,7 @@ test('@claim:header-mapping imports manually mapped columns with unrelated heade
   await page.locator('select[name="client"]').selectOption('buyer');
   await page.locator('select[name="project"]').selectOption('engagement');
   await page.getByRole('button', { name: 'Import invoices' }).click();
-  await expect(page.getByText('1 invoice rows imported.')).toBeVisible();
+  await expect(page.getByText('1 invoice row imported.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Custom header row' }).locator('..')).toContainText('Possible invoice: ACME-42');
 });
 
@@ -199,7 +199,7 @@ test('@claim:validated-import rejects blank required cells and non-numeric amoun
     buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-02,Acme,Site,Recovered row,completed,250')
   });
   await page.getByRole('button', { name: 'Import work', exact: true }).click();
-  await expect(page.getByText('1 work rows imported.')).toBeVisible();
+  await expect(page.getByText('1 work row imported.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Recovered row' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Safe saved row' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('375');
@@ -260,7 +260,7 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
     buffer: Buffer.from(`date,client,project,description,status,amount\n2026-08-01,${client},${project},Original reviewed task,completed,100`)
   });
   await page.getByRole('button', { name: 'Import work', exact: true }).click();
-  await expect(page.getByText('1 work rows imported.')).toBeVisible();
+  await expect(page.getByText('1 work row imported.')).toBeVisible();
   await page.locator('#file-invoices').setInputFiles({
     name: 'reviewed-invoice.csv', mimeType: 'text/csv',
     buffer: Buffer.from(`invoice date,invoice number,client,project\n2026-08-02,INV-OLD,${client},${project}`)
@@ -275,7 +275,7 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   });
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Replace source' }).click();
-  await expect(page.getByText(/1 work rows imported.*1 prior review decision was cleared because that work changed/u)).toBeVisible();
+  await expect(page.getByText(/1 work row imported.*1 prior review decision was cleared because that work changed/u)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'New implementation task never reviewed' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('500');
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
@@ -305,7 +305,7 @@ test('@claim:invoice-replacement clears links to invoices missing from the repla
   });
   await page.getByRole('button', { name: 'Import invoices' }).click();
 
-  await expect(page.getByText('1 invoice rows imported. 1 stale invoice link cleared.')).toBeVisible();
+  await expect(page.getByText('1 invoice row imported. 1 stale invoice link cleared.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
@@ -515,7 +515,7 @@ test('@claim:local-persistence keeps a real workspace after reload', async ({ pa
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({ name: 'saved.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Site,Saved task,completed,125') });
   await page.getByRole('button', { name: 'Import work' }).click();
-  await expect(page.getByText('1 work rows imported.')).toBeVisible();
+  await expect(page.getByText('1 work row imported.')).toBeVisible();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Saved task' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('125');
