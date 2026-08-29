@@ -493,6 +493,50 @@ test('@claim:paid-license uses the Sociobot checkout and verification contract',
   await expect(page.locator('.snapshots').getByText(/4 items/)).toBeVisible();
 });
 
+test('@claim:checkout-return-inactive-notice tells a returning buyer when an inactive license is locked', async ({ browser }) => {
+  for (const reason of ['invalid', 'expired', 'revoked'] as const) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const token = `checkout-return-${reason}`;
+    await page.route(`https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=${token}`, (route) => route.fulfill({
+      json: { valid: false, reason, expires_at: null }
+    }));
+
+    await page.goto(`/?license=${token}`);
+
+    await expect(page).toHaveURL(/\/$/u);
+    await expect(page.getByText('License no longer active. Check the token or buy a new license.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Buy review history — $19' })).toBeVisible();
+    await context.close();
+  }
+});
+
+test('@claim:daily-inactive-license-notice tells a buyer when daily revalidation locks an inactive license', async ({ browser }) => {
+  for (const reason of ['invalid', 'expired', 'revoked'] as const) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const token = `daily-revalidation-${reason}`;
+    await page.addInitScript(({ licenseKey, verdictKey, staleCheckedAt, token: storedToken }) => {
+      localStorage.setItem(licenseKey, storedToken);
+      localStorage.setItem(verdictKey, JSON.stringify({ valid: true, checkedAt: staleCheckedAt }));
+    }, {
+      licenseKey: 'sb_license:unbilled-work-sweep',
+      verdictKey: 'sb_license_verdict:unbilled-work-sweep',
+      staleCheckedAt: Date.now() - 86_400_001,
+      token
+    });
+    await page.route(`https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=${token}`, (route) => route.fulfill({
+      json: { valid: false, reason, expires_at: null }
+    }));
+
+    await page.goto('/');
+
+    await expect(page.getByText('License no longer active. Check the token or buy a new license.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Buy review history — $19' })).toBeVisible();
+    await context.close();
+  }
+});
+
 test('@claim:snapshot-history saves two named review totals on this device', async ({ page }) => {
   await page.route('https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=history-license', (route) => route.fulfill({ json: { valid: true, reason: 'ok', expires_at: null } }));
   await page.goto('/');
@@ -538,6 +582,7 @@ test('@claim:demo-isolation keeps demo data separate and discards it when leavin
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({ name: 'real.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Real Client,Real Project,Real workspace row,completed,125') });
   await page.getByRole('button', { name: 'Import work' }).click();
+  await expect(page.getByRole('heading', { name: 'Real workspace row' })).toBeVisible();
   await page.goto('/demo');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
   await page.getByRole('button', { name: 'Keep unbilled' }).first().click();

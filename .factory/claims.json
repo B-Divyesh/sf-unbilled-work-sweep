@@ -133,6 +133,20 @@
     "sandbox": "fresh browser context; assert checkout URL, mock a valid Sociobot verification response, and assert paid state"
   },
   {
+    "id": "checkout-return-inactive-notice",
+    "claim": "A checkout return tells you when an invalid, expired, or revoked license is no longer active",
+    "where": "checkout return notice",
+    "test": "npm test -- --grep @claim:checkout-return-inactive-notice",
+    "sandbox": "fresh browser contexts; return with each inactive API verdict and assert the locked state and recovery notice"
+  },
+  {
+    "id": "daily-inactive-license-notice",
+    "claim": "Daily license revalidation tells you when an invalid, expired, or revoked license is no longer active",
+    "where": "license revalidation notice",
+    "test": "npm test -- --grep @claim:daily-inactive-license-notice",
+    "sandbox": "fresh browser contexts; seed a stale cached valid verdict, return each inactive API verdict, and assert the locked state and recovery notice"
+  },
+  {
     "id": "snapshot-history",
     "claim": "A paid license adds review history with named weekly list totals on this device",
     "where": "landing paid section, README",

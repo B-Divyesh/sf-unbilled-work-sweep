@@ -319,7 +319,7 @@ function bindEvents(): void {
       void render().then(() => document.querySelector<HTMLElement>('[role="alert"]')?.focus());
     }
   });
-  document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', (event) => { event.preventDefault(); const token = new FormData(event.currentTarget as HTMLFormElement).get('license'); if (typeof token === 'string' && token.trim()) void verifyLicense(token.trim(), true); });
+  document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', (event) => { event.preventDefault(); const token = new FormData(event.currentTarget as HTMLFormElement).get('license'); if (typeof token === 'string' && token.trim()) void verifyLicense(token.trim(), 'manual'); });
   document.querySelector<HTMLSelectElement>('#currency')?.addEventListener('change', (event) => { state.currency = (event.currentTarget as HTMLSelectElement).value; void persistAndRender('Currency display updated.'); });
   document.querySelectorAll<HTMLInputElement>('[data-check-work]').forEach((input) => input.addEventListener('change', () => { state.checked[input.dataset.checkWork ?? ''] = input.checked; void persistAndRender(input.checked ? 'Item marked ready to invoice.' : 'Item returned to the queue.'); }));
   document.querySelectorAll<HTMLButtonElement>('[data-link-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.linkWork; const invoiceId = button.dataset.invoice; if (id && invoiceId) { state.decisions[id] = { kind: 'linked', invoiceId }; void persistAndRender('Invoice linked. The item left the list.'); } }));
@@ -372,15 +372,18 @@ async function action(name: string): Promise<void> {
   }
 }
 
-async function verifyLicense(token: string, announce = false): Promise<void> {
+type LicenseNotice = 'silent' | 'manual' | 'inactive';
+
+async function verifyLicense(token: string, notice: LicenseNotice = 'silent'): Promise<void> {
   localStorage.setItem(LICENSE_KEY, token);
   try {
     const response = await fetch(`https://api.sociobot.in/api/v1/products/${PRODUCT}/verify?license=${encodeURIComponent(token)}`);
     const verdict = await response.json() as { valid: boolean; reason?: string };
     localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: verdict.valid, checkedAt: Date.now() }));
     licensed = verdict.valid;
-    if (announce) message = verdict.valid ? 'License verified. Review history is active.' : 'License no longer active. Check the token or buy a new license.';
-  } catch { if (announce) error = 'The license check could not connect. Imports and exports still work; try again when online.'; }
+    if (verdict.valid && notice === 'manual') message = 'License verified. Review history is active.';
+    if (!verdict.valid && notice !== 'silent') message = 'License no longer active. Check the token or buy a new license.';
+  } catch { if (notice === 'manual') error = 'The license check could not connect. Imports and exports still work; try again when online.'; }
   await render();
 }
 
@@ -390,7 +393,7 @@ async function initLicense(): Promise<void> {
   const token = localStorage.getItem(LICENSE_KEY); if (!token) return;
   const cached = JSON.parse(localStorage.getItem(VERDICT_KEY) ?? 'null') as { valid: boolean; checkedAt: number } | null;
   licensed = cached?.valid ?? false;
-  if (!cached || Date.now() - cached.checkedAt > 86_400_000 || returned) void verifyLicense(token);
+  if (!cached || Date.now() - cached.checkedAt > 86_400_000 || returned) void verifyLicense(token, 'inactive');
 }
 
 function registerServiceWorker(): void {
