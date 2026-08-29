@@ -28,6 +28,7 @@ paid states. No sentence exceeds 22 words. No banned word appears.
 | Map invoice columns | 3 | Pass |
 | Required fields are marked. | 4 | Pass |
 | Dates must use YYYY-MM-DD or M/D/YYYY. | 6 | Pass |
+| hours multiplied by rate must produce a finite amount | 9 | Pass |
 | 1 prior review decision was cleared because that work changed. | 11 | Pass |
 | Your unbilled-work list will appear here | 6 | Pass |
 | Import completed work first. | 4 | Pass |
