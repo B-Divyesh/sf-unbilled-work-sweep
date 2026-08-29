@@ -1,61 +1,53 @@
-# Unbilled Work Sweep — polish round 1 handoff
+# Unbilled Work Sweep — independent verification 8 handoff
 
-## Delivered
+## Result
 
-- Repaired every finding in adversarial review 1; the finding-by-finding map is
-  in `.factory/polish-1.md`.
-- Preserved the midnight paperwork-garden visual system while making the static
-  fallback a complete, accessible product route.
-- Kept `/demo` and `?demo=1` as isolated sample paths with the persistent
-  banner, reset, and start-for-real controls. Demo state remains in the
-  `demo:` session-storage namespace.
-- Added four behavior claims and tests: queue filtering, review history,
-  normalized project-aware matching, and same-origin runtime asset caching.
-  The registry now has 26 claims, each with exactly one `@claim:` test.
-- Updated landing/README wording, metadata updates for every SPA route,
-  copy audit, product description, and mobile evidence.
+**FAIL — do not release candidate
+`0a3ce7bff1dce3d25f95467549b02feb845a7ee8`.** The live deployment at
+<https://unbilled-work-sweep.sociobot.in> matches the candidate, but fresh QA
+found release-blocking offline, reconciliation, and mobile touch-target defects.
 
-## Run and verify
+Full evidence is in [`.factory/verification-8.md`](verification-8.md).
+
+## Release blockers
+
+1. A cold normal `/` visit does not register the service worker. With browser
+   cache disabled, its first offline reload fails blank with
+   `ERR_INTERNET_DISCONNECTED`. `/demo` registers and reloads offline, which is
+   why the current claim test misses the public-claim failure.
+2. Replacing completed-work CSV can reuse a truncated row ID and transfer an
+   old invoice link to different new work. The reproduced never-reviewed $500
+   row disappeared from the checklist until manually unlinked.
+3. At 390 px, **Or import your CSV files** is a `218.3 × 24.8` px actionable
+   target, below the required 44 px height.
+
+Medium: an overflowing hours × rate calculation produces an unhandled page
+error with no visible validation message, although saved data survives reload.
+
+## Verification summary
+
+- All 26 commands in `.factory/claims.json`: PASS individually.
+- First-read and one-click sample demo: PASS.
+- `npm test`: PASS, 38/38.
+- `npx tsc --noEmit`: PASS.
+- `npm run build`: PASS; `dist/` produced.
+- `npm audit --omit=dev`: PASS, 0 vulnerabilities.
+- Live/candidate artifact comparison: exact byte match.
+- Live Axe on seven routes: zero violations of any impact.
+- Lighthouse mobile: root 99/100/100/100; demo 100/100/100/100.
+- Privacy flow: no off-origin requests except explicit Sociobot license verify.
+- License API allowance: 30 rapid successes, then 429 with `Retry-After: 4`.
+- Demo PWA cache/offline reload and current-worker update check: PASS.
+- Normal-root first-visit PWA registration/offline reload: FAIL.
+
+## Reproduce
 
 ```bash
 npm ci
 npm test
+npx tsc --noEmit
 npm run build
 ```
 
-The product is a static Vite PWA. Deploy `dist/`; it contains `index.html` at
-its root and the Static Web Apps configuration, manifest, service worker, and
-fallback pages.
-
-## Evidence
-
-- Clean install: `npm ci` completed with 0 vulnerabilities.
-- Claim registry check: `26 claims each have one test tag`.
-- Full browser/unit/integration/accessibility/privacy/offline suite:
-  `npm test -- --workers=4` — 38 passed (the Playwright result file reports
-  `status: passed`). This includes axe serious/critical scans across all SPA
-  routes and the static fallback, keyboard, mobile, demo isolation, privacy,
-  offline reload, runtime cache, and claim tests.
-- Production build: `npm run build` passed. Generated initial JavaScript is
-  34.88 kB / 12.19 kB gzip; CSS is 15.80 kB / 4.24 kB gzip.
-- Screenshots reviewed locally:
-  `.factory/evidence/polish-1-demo-390.png` and
-  `.factory/evidence/polish-1-static-404.png`.
-- Clean-clone claim verification: all 26 commands in `.factory/claims.json`
-  passed individually from `/tmp/unbilled-work-sweep-clean.Q5aYZQ`, followed
-  by `npm test` (38 passed) and `npm run build`.
-- Static deployment: `/opt/fleet/lib/deploy-static.sh unbilled-work-sweep
-  dist` completed Azure deployment `77bf94ce-eab1-45d4-91a8-fdaf69218a8a`.
-- Cold live Chromium check at 390×844 passed for `/`, `?demo=1`, the SPA
-  missing route, and `/404.html`: demo banner/reset/start-for-real and $5,840
-  sample state visible; mobile overflow `0`; correct SPA title/OG title;
-  static legal footer; 0 console/page errors; 0 external requests. Live
-  screenshots: `.factory/evidence/polish-1-live-demo-390.png` and
-  `.factory/evidence/polish-1-live-static-404.png`.
-- Cache-busted live fallback `<https://unbilled-work-sweep.sociobot.in/404.html?cold=live-polish-1>`
-  returned the new full shell (ETag `"90847195"`, last-modified
-  `2026-08-29 10:32:56 UTC`), without the old metaphor.
-
-## Known gaps
-
-None known. No credentials or third-party scripts are included.
+The detailed report records the exact live steps, artifact hashes, screenshots,
+headers, performance metrics, and required repairs. No product code was changed.
