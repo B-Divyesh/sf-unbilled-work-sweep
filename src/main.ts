@@ -55,23 +55,23 @@ function notice(): string {
 function homePage(): string {
   return `${header()}<main id="main">
     <section class="hero">
-      <div class="hero-copy"><p class="eyebrow">A weekly billing attention queue</p><h1 tabindex="-1">Find finished work you have not billed</h1><p class="lede">For freelancers and tiny agencies with work spread across task, time, and invoice tools.</p>
-        <div class="hero-actions"><a class="button primary" href="/demo" data-route>Try it with sample data</a><span>See a filled sweep in one click.</span></div>
+      <div class="hero-copy"><p class="eyebrow">Completed work to review before invoicing</p><h1 tabindex="-1">Find finished work you have not billed</h1><p class="lede">For freelancers and tiny agencies with work spread across task, time, and invoice tools.</p>
+        <div class="hero-actions"><a class="button primary" href="/demo" data-route>Try it with sample data</a><span>See a filled review in one click.</span></div>
         <a class="secondary-link" href="#sweep">Or import your CSV files</a>
         <ul class="plain-facts" aria-label="Product facts"><li>Files stay in this browser.</li><li>Works offline after your first visit.</li><li>Free sweep; $19 one-time saved review tools.</li></ul>
       </div>
-      <figure class="hero-art"><picture><source media="(max-width: 700px)" srcset="/assets/paperwork-garden-720.webp"><img src="/assets/paperwork-garden-1200.webp" width="1200" height="800" alt="Paper invoices form a moonlit landscape where coral envelopes flow toward a filing box." fetchpriority="high" decoding="async"></picture><figcaption>Bring the missed pieces of your paper trail into view.</figcaption></figure>
+      <figure class="hero-art"><picture><source media="(max-width: 700px)" srcset="/assets/paperwork-garden-720.webp"><img src="/assets/paperwork-garden-1200.webp" width="1200" height="800" alt="Paper invoices form a moonlit landscape where coral envelopes flow toward a filing box." fetchpriority="high" decoding="async"></picture><figcaption>Review completed work that may still need an invoice.</figcaption></figure>
     </section>
-    <section id="sweep" class="app-section" aria-labelledby="sweep-title"><div class="section-intro"><p class="eyebrow">Your local workspace</p><h2 id="sweep-title">Start this week’s sweep</h2><p>Add completed-work and invoice CSV files. You choose whether a suggested match counts as billed.</p></div>${notice()}${workspace()}</section>
-    <section id="how" class="how-section" aria-labelledby="how-title"><p class="eyebrow">Three deliberate steps</p><h2 id="how-title">How the sweep works</h2><ol><li><span>1</span><div><h3>Import exports</h3><p>Map the columns from your task, time, and invoice CSV files.</p></div></li><li><span>2</span><div><h3>Review matches</h3><p>Link an invoice or keep the completed work in your attention queue.</p></div></li><li><span>3</span><div><h3>Export your checklist</h3><p>Download the reviewed queue as a CSV for your invoicing session.</p></div></li></ol></section>
-    <section class="limits-section" aria-labelledby="limits-title"><div><p class="eyebrow">A boundary on purpose</p><h2 id="limits-title">It does not send invoices</h2></div><p>It does not track time, calculate tax, or change your source files. It only helps you review exported records.</p></section>
+    <section id="sweep" class="app-section" aria-labelledby="sweep-title"><div class="section-intro"><p class="eyebrow">Your local workspace</p><h2 id="sweep-title">Import work and invoice CSV files</h2><p>Add completed-work and invoice CSV files. You choose whether a suggested match counts as billed.</p></div>${notice()}${workspace()}</section>
+    <section id="how" class="how-section" aria-labelledby="how-title"><p class="eyebrow">Three steps</p><h2 id="how-title">How the review works</h2><ol><li><span>1</span><div><h3>Import exports</h3><p>Map the columns from your task, time, and invoice CSV files.</p></div></li><li><span>2</span><div><h3>Review matches</h3><p>Link an invoice or keep the completed work in your unbilled-work list.</p></div></li><li><span>3</span><div><h3>Export your checklist</h3><p>Download the reviewed list as a CSV for your invoicing session.</p></div></li></ol></section>
+    <section class="limits-section" aria-labelledby="limits-title"><div><p class="eyebrow">What this tool does not do</p><h2 id="limits-title">It does not send invoices</h2></div><p>It does not track time, calculate tax, or change your source files. It only helps you review exported records.</p></section>
     ${paidSection()}
   </main>${footer()}`;
 }
 
 function paidSection(): string {
   const label = licensed ? 'License active' : 'Buy saved review tools';
-  return `<section id="paid" class="paid-section" aria-labelledby="paid-title"><div><p class="eyebrow">Keep the habit</p><h2 id="paid-title">Save repeat reviews for $19 once</h2><p>Keep named weekly snapshots and compare past queue totals on this device. Core imports and checklist exports stay free.</p></div><div class="license-box"><a class="button primary" href="${CHECKOUT}" rel="noreferrer">${label}</a><p>Sociobot is the merchant of record. One payment; no subscription.</p><form id="license-form"><label for="license">Have a license? Paste it here</label><div class="inline-form"><input id="license" name="license" autocomplete="off" spellcheck="false"><button type="submit">Verify license</button></div></form><p class="fine-print">Buying means you accept the <a href="/terms" data-route>terms</a> and <a href="/privacy" data-route>privacy notice</a>.</p></div></section>`;
+  return `<section id="paid" class="paid-section" aria-labelledby="paid-title"><div><p class="eyebrow">Paid saved reviews</p><h2 id="paid-title">Save repeat reviews for $19 once</h2><p>Keep named weekly snapshots and compare past list totals on this device. Core imports and checklist exports stay free.</p></div><div class="license-box"><a class="button primary" href="${CHECKOUT}" rel="noreferrer">${label}</a><p>Checkout opens through Sociobot. One payment; no subscription.</p><form id="license-form"><label for="license">Have a license? Paste it here</label><div class="inline-form"><input id="license" name="license" autocomplete="off" spellcheck="false"><button type="submit">Verify license</button></div></form><p class="fine-print">Buying means you accept the <a href="/terms" data-route>terms</a> and <a href="/privacy" data-route>privacy notice</a>.</p></div></section>`;
 }
 
 function importCard(kind: ImportKind): string {
@@ -101,7 +101,7 @@ function linkedMatches(): string {
     return [{ work, invoiceNumber: invoice?.number ?? 'Invoice unavailable' }];
   });
   if (!matches.length) return '';
-  return `<section class="linked-matches" aria-labelledby="linked-matches-title"><div><h3 id="linked-matches-title">Linked matches</h3><p>Unlink a match to return its work to the attention queue.</p></div><ul>${matches.map(({ work, invoiceNumber }) => `<li><div><strong>${escapeHtml(work.description)}</strong><span>${escapeHtml(invoiceNumber)} · ${escapeHtml(work.client)} / ${escapeHtml(work.project || 'No project')}</span></div><button class="text-button" data-unlink-work="${escapeHtml(work.id)}">Unlink invoice</button></li>`).join('')}</ul></section>`;
+  return `<section class="linked-matches" aria-labelledby="linked-matches-title"><div><h3 id="linked-matches-title">Linked matches</h3><p>Unlink a match to return its work to the list.</p></div><ul>${matches.map(({ work, invoiceNumber }) => `<li><div><strong>${escapeHtml(work.description)}</strong><span>${escapeHtml(invoiceNumber)} · ${escapeHtml(work.client)} / ${escapeHtml(work.project || 'No project')}</span></div><button class="text-button" data-unlink-work="${escapeHtml(work.id)}">Unlink invoice</button></li>`).join('')}</ul></section>`;
 }
 
 function workspace(): string {
@@ -110,10 +110,10 @@ function workspace(): string {
   const linked = Object.values(state.decisions).filter((item) => item.kind === 'linked').length;
   const hasData = state.work.length || state.invoices.length;
   return `<div class="workspace" data-testid="workspace"><section class="import-section" aria-labelledby="import-title"><h2 id="import-title" class="sr-only">Import CSV files</h2><div class="import-grid">${importCard('work')}${importCard('invoices')}</div>${mappingPanel()}</section>
-    ${hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Attention queue</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
+    ${hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Unbilled-work list</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
       <div class="toolbar"><label>Currency<select id="currency" aria-label="Display currency"><option ${state.currency === 'USD' ? 'selected' : ''}>USD</option><option ${state.currency === 'GBP' ? 'selected' : ''}>GBP</option><option ${state.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${state.currency === 'CAD' ? 'selected' : ''}>CAD</option><option ${state.currency === 'AUD' ? 'selected' : ''}>AUD</option></select></label><div><button data-action="export-checklist" ${queue.length ? '' : 'disabled'}>Export checklist CSV</button><button class="ghost" data-action="export-workspace">Export workspace</button><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import workspace</label></div></div>
-      ${queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><p class="empty-title">No completed work needs attention</p><p>Import more work, or unlink a match to bring it back.</p></div>`}
-      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your attention queue will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label></div>`}</div>`;
+      ${queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><p class="empty-title">No completed work needs review</p><p>Import more work, or unlink a match to bring it back.</p></div>`}
+      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your unbilled-work list will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label></div>`}</div>`;
 }
 
 function snapshotList(): string {
@@ -121,35 +121,39 @@ function snapshotList(): string {
   const snapshotKey = isDemo ? 'demo:unbilled:snapshots' : 'unbilled:snapshots';
   const snapshots = JSON.parse(snapshotStore.getItem(snapshotKey) ?? '[]') as { name: string; date: string; count: number; value: number }[];
   if (!snapshots.length || !licensed) return '';
-  return `<section class="snapshots" aria-labelledby="snapshot-title"><h3 id="snapshot-title">Saved sweep snapshots</h3><ul>${snapshots.map((item) => `<li><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.date)} · ${item.count} items · ${formatMoney(item.value)}</span></li>`).join('')}</ul></section>`;
+  return `<section class="snapshots" aria-labelledby="snapshot-title"><h3 id="snapshot-title">Saved review history</h3><ul>${snapshots.map((item) => `<li><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.date)} · ${item.count} items · ${formatMoney(item.value)}</span></li>`).join('')}</ul></section>`;
 }
 
 function demoPage(): string {
   const queue = queueFor(state);
-  return `${header()}${demoBanner()}<main id="main" class="demo-main"><section class="demo-heading"><p class="eyebrow">Friday, 28 August</p><h1 tabindex="-1">Review work before you invoice</h1><p>This sample has ${state.work.length} work rows and ${state.invoices.length} possible invoice matches. Review each suggestion, then export the queue.</p></section>${notice()}${workspace()}<section class="demo-help"><h2>What to try</h2><p>Link the Morrow invoice. Keep North Star in the queue. Check an item, then export ${queue.length} rows.</p></section></main>${footer()}`;
+  return `${header()}${demoBanner()}<main id="main" class="demo-main"><section class="demo-heading"><p class="eyebrow">Friday, 28 August</p><h1 tabindex="-1">Review work before you invoice</h1><p>This sample has ${state.work.length} work rows and ${state.invoices.length} possible invoice matches. Review each suggestion, then export the list.</p></section>${notice()}${workspace()}<section class="demo-help"><h2>What to try</h2><p>Link the Morrow invoice. Keep North Star in the list. Check an item, then export ${queue.length} rows.</p></section></main>${footer()}`;
 }
 
 function legalPage(kind: 'privacy' | 'terms'): string {
   const privacy = kind === 'privacy';
-  const title = privacy ? 'Your files stay on this device' : 'Terms for using the sweep';
-  const body = privacy ? `<p>Unbilled Work Sweep stores real imports in your browser’s IndexedDB. Demo data uses separate session storage and is removed when that browser session ends.</p><h2>What leaves your device</h2><p>Your CSV rows do not leave your device. The app makes a request to Sociobot only when you add or verify a paid license.</p><h2>What you can remove</h2><p>Use “Clear imported data” to remove the current workspace. You can also clear this site’s browser storage.</p><h2>Payment records</h2><p>Sociobot and its payment partner handle checkout and payment records. This app stores only your license token and its latest verification result.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with privacy questions.</p>` : `<p>Unbilled Work Sweep is a review aid. It does not provide tax, legal, or accounting advice.</p><h2>Your responsibility</h2><p>Check every suggested invoice match before using the exported checklist. Keep your original source exports.</p><h2>Paid license</h2><p>The $19 purchase is a one-time license for saved review tools. Sociobot is the merchant of record. Refunds are handled through Sociobot and revoke the license.</p><h2>Availability</h2><p>The software is provided “as is” without a promise that every export format will map automatically.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> for license help.</p>`;
+  const title = privacy ? 'Your files stay on this device' : 'Terms for using this tool';
+  const body = privacy ? `<p>Unbilled Work Sweep stores real imports in your browser’s IndexedDB. Demo data uses separate session storage and is removed when that browser session ends.</p><h2>What leaves your device</h2><p>Your CSV rows do not leave your device.</p><h2>What you can remove</h2><p>Use “Clear imported data” to remove the current workspace. You can also clear this site’s browser storage.</p><h2>Paid license storage</h2><p>This app stores only your license token and its latest verification result.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with privacy questions.</p>` : `<p>Unbilled Work Sweep is a review aid. It does not provide tax, legal, or accounting advice.</p><h2>Your responsibility</h2><p>Check every suggested invoice match before using the exported checklist. Keep your original source exports.</p><h2>Paid license</h2><p>The $19 purchase is a one-time license for saved review tools. Checkout opens through Sociobot.</p><h2>Availability</h2><p>The software is provided “as is” without a promise that every export format will map automatically.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> for license help.</p>`;
   return `${header()}<main id="main" class="legal"><p class="eyebrow">${privacy ? 'Privacy' : 'Terms'} · updated 28 August 2026</p><h1 tabindex="-1">${title}</h1>${body}</main>${footer()}`;
 }
 
 function notFoundPage(): string {
-  return `${header()}<main id="main" class="not-found"><div><p class="eyebrow">404 · Misfiled page</p><h1 tabindex="-1">This page missed the invoice stack</h1><p>The address may be wrong, or the page may have moved.</p><a class="button primary" href="/" data-route>Return to the sweep</a></div><img src="/assets/paperwork-garden-720.webp" width="720" height="480" alt="Paper invoices drift through a moonlit landscape."></main>${footer()}`;
+  return `${header()}<main id="main" class="not-found"><div><p class="eyebrow">404 error</p><h1 tabindex="-1">Page not found</h1><p>The address may be wrong, or the page may have moved.</p><a class="button primary" href="/" data-route>Return home</a></div><img src="/assets/paperwork-garden-720.webp" width="720" height="480" alt="Paper invoices drift through a moonlit landscape."></main>${footer()}`;
 }
 
 function setMeta(path: string): void {
   const details: Record<string, [string, string]> = {
     '/': ['Unbilled Work Sweep — Find work to invoice', 'Compare task, time, and invoice CSV files. Review completed work that may still need an invoice, all in your browser.'],
-    '/demo': ['Demo — Unbilled Work Sweep', 'Try a complete billing attention sweep with sample work and invoices.'],
+    '/demo': ['Demo — Unbilled Work Sweep', 'Try a complete billing review with sample work and invoices.'],
     '/privacy': ['Privacy — Unbilled Work Sweep', 'How Unbilled Work Sweep keeps CSV imports and review data on your device.'],
     '/terms': ['Terms — Unbilled Work Sweep', 'Terms for using Unbilled Work Sweep and its one-time paid license.']
   };
   const [title, description] = details[path] ?? ['Page not found — Unbilled Work Sweep', 'Return to Unbilled Work Sweep.'];
   document.title = title;
   document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title);
+  document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', title);
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description);
   document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', `https://unbilled-work-sweep.sociobot.in${path === '/' ? '/' : path}`);
 }
 
@@ -159,7 +163,14 @@ async function render(focus = false): Promise<void> {
   setMeta(isDemo ? '/demo' : path);
   app.innerHTML = isDemo ? demoPage() : path === '/' ? homePage() : path === '/privacy' ? legalPage('privacy') : path === '/terms' ? legalPage('terms') : notFoundPage();
   bindEvents();
-  if (focus) requestAnimationFrame(() => document.querySelector<HTMLElement>('h1')?.focus());
+  if (focus) requestAnimationFrame(() => {
+    const heading = document.querySelector<HTMLElement>('h1');
+    const announcement = document.createElement('p');
+    announcement.className = 'sr-only'; announcement.setAttribute('aria-live', 'polite');
+    announcement.textContent = heading?.textContent ?? 'Page loaded';
+    document.querySelector('main')?.prepend(announcement);
+    heading?.focus();
+  });
 }
 
 async function navigate(path: string): Promise<void> {
@@ -250,9 +261,9 @@ function bindEvents(): void {
   document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', (event) => { event.preventDefault(); const token = new FormData(event.currentTarget as HTMLFormElement).get('license'); if (typeof token === 'string' && token.trim()) void verifyLicense(token.trim(), true); });
   document.querySelector<HTMLSelectElement>('#currency')?.addEventListener('change', (event) => { state.currency = (event.currentTarget as HTMLSelectElement).value; void persistAndRender('Currency display updated.'); });
   document.querySelectorAll<HTMLInputElement>('[data-check-work]').forEach((input) => input.addEventListener('change', () => { state.checked[input.dataset.checkWork ?? ''] = input.checked; void persistAndRender(input.checked ? 'Item marked ready to invoice.' : 'Item returned to the queue.'); }));
-  document.querySelectorAll<HTMLButtonElement>('[data-link-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.linkWork; const invoiceId = button.dataset.invoice; if (id && invoiceId) { state.decisions[id] = { kind: 'linked', invoiceId }; void persistAndRender('Invoice linked. The item left the attention queue.'); } }));
+  document.querySelectorAll<HTMLButtonElement>('[data-link-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.linkWork; const invoiceId = button.dataset.invoice; if (id && invoiceId) { state.decisions[id] = { kind: 'linked', invoiceId }; void persistAndRender('Invoice linked. The item left the list.'); } }));
   document.querySelectorAll<HTMLButtonElement>('[data-keep-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.keepWork; if (id) { state.decisions[id] = { kind: 'keep' }; void persistAndRender('Match reviewed. The work stays in the queue.'); } }));
-  document.querySelectorAll<HTMLButtonElement>('[data-unlink-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.unlinkWork; if (id) { delete state.decisions[id]; void persistAndRender('Invoice unlinked. The item returned to the attention queue.'); } }));
+  document.querySelectorAll<HTMLButtonElement>('[data-unlink-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.unlinkWork; if (id) { delete state.decisions[id]; void persistAndRender('Invoice unlinked. The item returned to the list.'); } }));
   document.querySelectorAll<HTMLElement>('[data-action]').forEach((button) => button.addEventListener('click', () => void action(button.dataset.action ?? '')));
   document.querySelector<HTMLInputElement>('#import-workspace')?.addEventListener('change', async (event) => {
     const file = (event.currentTarget as HTMLInputElement).files?.[0]; if (!file) return;
@@ -289,7 +300,7 @@ async function action(name: string): Promise<void> {
     const queue = queueFor(state); const snapshotStore = isDemo ? sessionStorage : localStorage; const snapshotKey = isDemo ? 'demo:unbilled:snapshots' : 'unbilled:snapshots';
     const snapshots = JSON.parse(snapshotStore.getItem(snapshotKey) ?? '[]') as unknown[];
     snapshots.unshift({ name: nameValue, date: new Date().toISOString().slice(0, 10), count: queue.length, value: queue.reduce((sum, work) => sum + work.amount, 0) });
-    snapshotStore.setItem(snapshotKey, JSON.stringify(snapshots)); message = 'Sweep snapshot saved on this device.'; await render();
+    snapshotStore.setItem(snapshotKey, JSON.stringify(snapshots)); message = 'Review snapshot saved on this device.'; await render();
   }
   if (name === 'apply-update' && waitingServiceWorker) {
     const reload = () => location.reload();

@@ -11,7 +11,14 @@
     "claim": "CSV headers do not need to match the app's field names because the user can map them before import",
     "where": "README, CSV mapping panel",
     "test": "npm test -- --grep @claim:header-mapping",
-    "sandbox": "fresh browser context; upload a CSV with unrelated header names, manually map each required field, and assert the row and value import"
+    "sandbox": "fresh browser context; upload completed-work and invoice CSV fixtures with unrelated header names, map their required fields, and assert the row, value, and suggested invoice import"
+  },
+  {
+    "id": "queue-filter",
+    "claim": "Already billed and unfinished completed-work rows are excluded from the unbilled-work list",
+    "where": "demo list summary, README",
+    "test": "npm test -- --grep @claim:queue-filter",
+    "sandbox": "fresh browser context; import completed, already-billed, and unfinished work rows and assert only the completed unbilled row and its value appear"
   },
   {
     "id": "missing-status",
@@ -63,6 +70,13 @@
     "sandbox": "fresh browser context; load demo, wait for its service worker, go offline, reload, and assert the sample queue"
   },
   {
+    "id": "runtime-asset-cache",
+    "claim": "The service worker stores fetched same-origin assets for offline reuse",
+    "where": "service worker behavior",
+    "test": "npm test -- --grep @claim:runtime-asset-cache",
+    "sandbox": "fresh browser context on a unique origin; fetch the shipped social-preview asset and assert its same-origin path enters the service-worker cache"
+  },
+  {
     "id": "local-persistence",
     "claim": "Real workspace data stays in IndexedDB across a reload",
     "where": "README, workspace",
@@ -84,6 +98,13 @@
     "sandbox": "fresh browser context; assert checkout URL, mock a valid Sociobot verification response, and assert paid state"
   },
   {
+    "id": "snapshot-history",
+    "claim": "A paid license saves named reviews and shows their past list totals on this device",
+    "where": "landing paid section, README",
+    "test": "npm test -- --grep @claim:snapshot-history",
+    "sandbox": "fresh browser context; mock a valid license, save two named demo reviews with different queue states, and assert both counts and values are visible"
+  },
+  {
     "id": "hours-times-rate",
     "claim": "When amount is missing, imports calculate it from hours multiplied by rate",
     "where": "landing workspace, README",
@@ -96,6 +117,13 @@
     "where": "README, CSV mapping panel",
     "test": "npm test -- --grep @claim:invoice-date-guard",
     "sandbox": "fresh browser context; reproduce 10/1/2026 work versus 9/1/2026 invoice, assert no suggestion, accept a cross-year later invoice, then reject malformed and impossible dates without replacing data"
+  },
+  {
+    "id": "match-normalization",
+    "claim": "Suggestions compare normalized client and project names, and do not suggest a different project",
+    "where": "README",
+    "test": "npm test -- --grep @claim:match-normalization",
+    "sandbox": "fresh browser context; import a client wording variation with a matching project and a same-client different-project near miss, then assert only the matching invoice is suggested"
   },
   {
     "id": "demo-isolation",

@@ -38,6 +38,31 @@ test('@claim:header-mapping imports manually mapped columns with unrelated heade
   await expect(page.getByText('1 work rows imported.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Custom header row' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('275');
+
+  await page.locator('#file-invoices').setInputFiles({
+    name: 'custom-invoices.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('issued,reference,buyer,engagement\n8/2/2026,ACME-42,Acme,Launch')
+  });
+  await page.locator('select[name="date"]').selectOption('issued');
+  await page.locator('select[name="number"]').selectOption('reference');
+  await page.locator('select[name="client"]').selectOption('buyer');
+  await page.locator('select[name="project"]').selectOption('engagement');
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  await expect(page.getByText('1 invoice rows imported.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Custom header row' }).locator('..')).toContainText('Possible invoice: ACME-42');
+});
+
+test('@claim:queue-filter excludes billed and unfinished work from the list', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'filter.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount,already billed\n2026-08-01,Acme,Site,Ready for review,completed,100,no\n2026-08-02,Acme,Site,Already billed,completed,200,yes\n2026-08-03,Acme,Site,Still in progress,in progress,300,no')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ready for review' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Already billed' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Still in progress' })).toHaveCount(0);
+  await expect(page.getByTestId('queue-total')).toContainText('100');
 });
 
 test('@claim:missing-status treats a work row without a status column as completed', async ({ page }) => {
@@ -113,7 +138,7 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   await page.goto('/demo');
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
   await page.getByRole('button', { name: 'Link invoice' }).first().click();
-  await expect(page.getByText('Invoice linked. The item left the attention queue.')).toBeVisible();
+  await expect(page.getByText('Invoice linked. The item left the list.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('3,640');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toBeVisible();
@@ -123,7 +148,7 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   await expect(unlink).toBeVisible();
   await unlink.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByText('Invoice unlinked. The item returned to the attention queue.')).toBeVisible();
+  await expect(page.getByText('Invoice unlinked. The item returned to the list.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
@@ -208,6 +233,18 @@ test('@claim:offline-reload works offline after the first visit', async ({ page,
   await expect(page.getByTestId('work-list')).toBeVisible();
 });
 
+test('@claim:runtime-asset-cache stores a fetched same-origin asset for offline reuse', async ({ page }) => {
+  await page.goto(`http://runtime-cache-${Date.now()}.localhost:4173/demo`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  const assetPath = '/assets/og-paperwork-garden.webp';
+  await expect(page.evaluate(async (path) => (await fetch(path, { cache: 'no-store' })).ok, assetPath)).resolves.toBe(true);
+  await expect.poll(() => page.evaluate(async (path) => {
+    const requests = await Promise.all((await caches.keys()).map(async (name) => (await (await caches.open(name)).keys()).map((request) => new URL(request.url).pathname)));
+    return requests.flat().includes(path);
+  }, assetPath)).toBe(true);
+});
+
 test('@claim:invoice-date-guard never suggests an invoice dated before its work', async ({ page }) => {
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({ name: 'work.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n10/1/2026,Acme,Launch,October work,completed,100\n12/31/2025,Beta,Renewal,Year end work,completed,200') });
@@ -232,6 +269,17 @@ test('@claim:invoice-date-guard never suggests an invoice dated before its work'
   await expect(page.getByTestId('queue-total')).toContainText('300');
 });
 
+test('@claim:match-normalization suggests matching client and project wording, not a different project', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({ name: 'work.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Brightside Studio,Website launch,Landing page work,completed,500') });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await page.locator('#file-invoices').setInputFiles({ name: 'invoices.csv', mimeType: 'text/csv', buffer: Buffer.from('invoice date,invoice number,client,project\n2026-08-02,INV-GOOD,Brightside Studios,Website Launch\n2026-08-03,INV-NEAR,Brightside Studios,Annual audit') });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  const row = page.getByRole('heading', { name: 'Landing page work' }).locator('..');
+  await expect(row).toContainText('Possible invoice: INV-GOOD');
+  await expect(row).not.toContainText('INV-NEAR');
+});
+
 test('@claim:paid-license uses the Sociobot checkout and verification contract', async ({ page }) => {
   await page.route('https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=test-license', (route) => route.fulfill({ json: { valid: true, reason: 'ok', expires_at: null } }));
   await page.goto('/');
@@ -245,6 +293,24 @@ test('@claim:paid-license uses the Sociobot checkout and verification contract',
   await page.getByRole('button', { name: 'Save named snapshot' }).click();
   await expect(page.getByText('Friday sweep')).toBeVisible();
   await expect(page.locator('.snapshots').getByText(/4 items/)).toBeVisible();
+});
+
+test('@claim:snapshot-history saves two named review totals on this device', async ({ page }) => {
+  await page.route('https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=history-license', (route) => route.fulfill({ json: { valid: true, reason: 'ok', expires_at: null } }));
+  await page.goto('/');
+  await page.getByLabel('Have a license? Paste it here').fill('history-license');
+  await page.getByRole('button', { name: 'Verify license' }).click();
+  await page.goto('/demo');
+  page.once('dialog', (dialog) => dialog.accept('Before invoice review'));
+  await page.getByRole('button', { name: 'Save named snapshot' }).click();
+  await expect(page.locator('.snapshots')).toContainText('Before invoice review');
+  await expect(page.locator('.snapshots')).toContainText('4 items · $5,840.00');
+  await page.getByRole('button', { name: 'Link invoice' }).first().click();
+  page.once('dialog', (dialog) => dialog.accept('After invoice review'));
+  await page.getByRole('button', { name: 'Save named snapshot' }).click();
+  await expect(page.locator('.snapshots')).toContainText('After invoice review');
+  await expect(page.locator('.snapshots')).toContainText('3 items · $3,640.00');
+  await expect(page.locator('.snapshots li')).toHaveCount(2);
 });
 
 test('@claim:local-persistence keeps a real workspace after reload', async ({ page }) => {
@@ -313,7 +379,7 @@ test('@claim:clear-workspace removes the current workspace and persists the empt
   await expect(page.getByText('Imported data cleared.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Clear this row' })).toHaveCount(0);
   await page.reload();
-  await expect(page.getByText('Your attention queue will appear here')).toBeVisible();
+  await expect(page.getByText('Your unbilled-work list will appear here')).toBeVisible();
 });
 
 test('@claim:license-storage stores only the license token and latest verification result', async ({ page }) => {
@@ -430,6 +496,12 @@ test('routes, keyboard landmarks, and serious accessibility issues pass', async 
     await expect(page.locator('main')).toHaveCount(1);
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page).toHaveTitle(/Unbilled Work Sweep/);
+    await expect(page.locator('meta[name="description"]')).not.toHaveAttribute('content', '');
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', await page.title());
+    await expect(page.locator('meta[property="og:description"]')).not.toHaveAttribute('content', '');
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', await page.title());
+    await expect(page.locator('meta[name="twitter:description"]')).not.toHaveAttribute('content', '');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://unbilled-work-sweep.sociobot.in${path === '/' ? '/' : path}`);
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
     expect(results.violations.find((violation) => violation.id === 'heading-order')).toBeUndefined();
@@ -441,6 +513,25 @@ test('routes, keyboard landmarks, and serious accessibility issues pass', async 
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main')).toBeVisible();
+});
+
+test('the static 404 fallback has the product skeleton, literal copy, and route metadata', async ({ page }) => {
+  await page.goto('/404.html');
+  await expect(page).toHaveTitle('Page not found — Unbilled Work Sweep');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /requested Unbilled Work Sweep page was not found/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://unbilled-work-sweep.sociobot.in/404.html');
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Page not found — Unbilled Work Sweep');
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeVisible();
+  await expect(page.getByRole('banner')).toContainText('Unbilled Work Sweep');
+  await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toContainText('Demo');
+  await expect(page.getByRole('main')).toContainText('404 error');
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Return home' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('contentinfo')).toContainText('Privacy');
+  await expect(page.getByRole('contentinfo')).toContainText('Terms');
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
 });
 
 test('demo heading order and persistent controls meet the accessibility contract', async ({ page }) => {

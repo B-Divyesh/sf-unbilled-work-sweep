@@ -43,7 +43,11 @@ export function suggestions(work: WorkItem, invoices: Invoice[]): { invoice: Inv
     const workDate = parseCalendarDate(work.date);
     const invoiceDate = parseCalendarDate(invoice.date);
     const dateOk = workDate !== null && invoiceDate !== null && invoiceDate >= workDate;
-    return { invoice, score: dateOk ? clientScore * 0.65 + projectScore * 0.35 : 0 };
+    // A shared client alone is not enough when both exports name different
+    // projects. Keeping those rows out of the suggestion list avoids turning
+    // a broad client match into a misleading invoice recommendation.
+    const projectsAgree = !work.project || !invoice.project || projectScore >= 0.55;
+    return { invoice, score: dateOk && projectsAgree ? clientScore * 0.65 + projectScore * 0.35 : 0 };
   }).filter(({ score }) => score >= 0.55).sort((a, b) => b.score - a.score);
 }
 

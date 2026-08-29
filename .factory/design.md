@@ -31,7 +31,7 @@ An 8px base scale drives 8, 16, 24, 32, 48, 64, and 96px gaps. The hero uses an 
 
 ## Interaction grammar
 
-Actions feel like moving paper across a desk. Import zones accept click, keyboard, or drop. Match suggestions appear beside the original name and must be confirmed. Linked decisions collect in a review strip, where unlinking puts the work back in the attention queue. Checklist items receive a coral-to-moss stamp when checked. Undo is available after destructive clearing. The mobile layout converts the table into labelled paper slips and keeps actions in document order.
+Actions feel like moving paper across a desk. Import zones accept click, keyboard, or drop. Match suggestions appear beside the original name and must be confirmed. Linked decisions collect in a review strip, where unlinking puts the work back in the unbilled-work list. Checklist items receive a coral-to-moss stamp when checked. Undo is available after destructive clearing. The mobile layout converts the table into labelled paper slips and keeps actions in document order.
 
 ## Motion policy
 

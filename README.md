@@ -2,7 +2,7 @@
 
 Find completed work that still needs an invoice.
 
-Unbilled Work Sweep is a local-first weekly review for freelancers and tiny agencies. It compares completed-work and invoice CSV exports, shows possible matches for review, and exports an invoice-draft checklist. It is not a time tracker, invoicing system, or tax tool.
+Unbilled Work Sweep keeps a weekly invoice review in your browser for freelancers and tiny agencies. It compares completed-work and invoice CSV exports, shows possible matches for review, and exports an invoice-draft checklist. It is not a time tracker, invoicing system, or tax tool.
 
 Live site: <https://unbilled-work-sweep.sociobot.in>
 
@@ -13,11 +13,11 @@ One-click demo: <https://unbilled-work-sweep.sociobot.in/demo>
 - Imports completed-work and invoice CSV exports.
 - Suggests invoice matches using client and project names. A suggestion changes nothing until you review it, and every link can be reversed.
 - Lists completed rows that are not marked billed or linked to an invoice.
-- Exports the current attention queue as a CSV checklist.
+- Exports the current unbilled-work list as a CSV checklist.
 - Keeps real workspace data in IndexedDB on the device.
 - Works offline after the first successful visit.
 
-The free sweep includes imports, review, workspace backup, and checklist export. A $19 one-time license adds named weekly snapshots with past queue totals. Checkout and license verification use the Sociobot billing API; there is no embedded payment provider.
+The free sweep includes imports, review, workspace backup, and checklist export. A $19 one-time license saves named reviews and shows their past list totals. Checkout and license verification use the Sociobot billing API; there is no embedded payment provider.
 
 ## CSV fields
 
@@ -37,8 +37,8 @@ Invoice CSV:
 - Required: invoice date, invoice number, client
 - Optional: project, status
 
-The matcher normalizes client wording and compares client and project names. Invoice dates before work dates are not suggested. Every match remains a review choice, and linked matches can be returned to the queue.
-Replacing the invoice CSV clears links to invoices that are no longer present, returning that work to the attention queue.
+Suggestions compare normalized client and project names. A different project is not suggested. Invoice dates before work dates are not suggested. Every match remains a review choice, and linked matches can be returned to the list.
+Replacing the invoice CSV clears links to invoices that are no longer present, returning that work to the list.
 
 ## Run locally
 
@@ -78,7 +78,7 @@ Use **Export workspace** for a JSON backup. Use **Clear imported data** to remov
 
 ## Deploy
 
-Deploy the contents of `dist/` to a static host. `staticwebapp.config.json` supplies SPA fallback, security headers, cache rules, and the 404 rewrite. The service worker precaches the app shell and stores same-origin assets after use.
+Deploy the contents of `dist/` to a static host. `staticwebapp.config.json` supplies SPA fallback, security headers, cache rules, and the 404 rewrite. The service worker precaches the app shell.
 
 ## Project notes
 

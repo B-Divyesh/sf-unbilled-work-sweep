@@ -11,7 +11,7 @@ const aliases: Record<ImportKind, Record<string, string[]>> = {
     amount: ['amount', 'value', 'total', 'billable amount'],
     hours: ['hours', 'duration hours', 'billable hours'],
     rate: ['rate', 'hourly rate', 'billable rate'],
-    billed: ['billed', 'invoiced', 'is billed', 'invoice status']
+    billed: ['billed', 'already billed', 'invoiced', 'is billed', 'invoice status']
   },
   invoices: {
     date: ['date', 'invoice date', 'issued date'],
