@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-08-29T19:00:15.622Z",
+  "routes": [
+    {
+      "path": "/",
+      "violations": 0,
+      "seriousOrCritical": 0
+    },
+    {
+      "path": "/?demo=1",
+      "violations": 0,
+      "seriousOrCritical": 0
+    },
+    {
+      "path": "/privacy",
+      "violations": 0,
+      "seriousOrCritical": 0
+    },
+    {
+      "path": "/terms",
+      "violations": 0,
+      "seriousOrCritical": 0
+    },
+    {
+      "path": "/missing-polish-3",
+      "violations": 0,
+      "seriousOrCritical": 0
+    },
+    {
+      "path": "/404.html",
+      "violations": 0,
+      "seriousOrCritical": 0
+    }
+  ]
+}

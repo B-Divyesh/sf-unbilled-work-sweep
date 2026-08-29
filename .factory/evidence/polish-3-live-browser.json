@@ -1,0 +1,50 @@
+{
+  "checkedAt": "2026-08-29T18:59:39.982Z",
+  "releaseCommit": "051b87d",
+  "demo": {
+    "query": true,
+    "banner": true,
+    "reset": true,
+    "firstViewport": true,
+    "isolated": true
+  },
+  "multiSource": {
+    "combinedTotal": 300,
+    "duplicateSkipped": true,
+    "replacementConfirmed": true,
+    "replacementTotal": 350,
+    "sourceHashUnchanged": true,
+    "singularFeedback": true
+  },
+  "routes": [
+    {
+      "path": "/",
+      "title": "Unbilled Work Sweep — Find work to invoice",
+      "h1": "Find finished work you have not billed"
+    },
+    {
+      "path": "/demo",
+      "title": "Demo — Unbilled Work Sweep",
+      "h1": "Review work before you invoice"
+    },
+    {
+      "path": "/privacy",
+      "title": "Privacy — Unbilled Work Sweep",
+      "h1": "Your files stay on this device"
+    },
+    {
+      "path": "/terms",
+      "title": "Terms — Unbilled Work Sweep",
+      "h1": "Terms for using this tool"
+    },
+    {
+      "path": "/missing-polish-3",
+      "title": "Page not found — Unbilled Work Sweep",
+      "h1": "Page not found"
+    }
+  ],
+  "focusTransferred": true,
+  "static404": true,
+  "consoleErrors": [],
+  "offOriginRequests": []
+}
