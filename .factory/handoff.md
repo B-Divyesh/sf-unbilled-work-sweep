@@ -41,8 +41,21 @@ fallback pages.
 - Screenshots reviewed locally:
   `.factory/evidence/polish-1-demo-390.png` and
   `.factory/evidence/polish-1-static-404.png`.
-- Post-deploy cold-open and live checks are appended after the release push.
+- Clean-clone claim verification: all 26 commands in `.factory/claims.json`
+  passed individually from `/tmp/unbilled-work-sweep-clean.Q5aYZQ`, followed
+  by `npm test` (38 passed) and `npm run build`.
+- Static deployment: `/opt/fleet/lib/deploy-static.sh unbilled-work-sweep
+  dist` completed Azure deployment `77bf94ce-eab1-45d4-91a8-fdaf69218a8a`.
+- Cold live Chromium check at 390×844 passed for `/`, `?demo=1`, the SPA
+  missing route, and `/404.html`: demo banner/reset/start-for-real and $5,840
+  sample state visible; mobile overflow `0`; correct SPA title/OG title;
+  static legal footer; 0 console/page errors; 0 external requests. Live
+  screenshots: `.factory/evidence/polish-1-live-demo-390.png` and
+  `.factory/evidence/polish-1-live-static-404.png`.
+- Cache-busted live fallback `<https://unbilled-work-sweep.sociobot.in/404.html?cold=live-polish-1>`
+  returned the new full shell (ETag `"90847195"`, last-modified
+  `2026-08-29 10:32:56 UTC`), without the old metaphor.
 
 ## Known gaps
 
-None known locally. No credentials or third-party scripts are included.
+None known. No credentials or third-party scripts are included.
