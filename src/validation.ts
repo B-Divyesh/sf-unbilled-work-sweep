@@ -1,4 +1,5 @@
 import type { Decision, Invoice, SweepState, WorkItem } from './types';
+import { parseCalendarDate } from './dates';
 
 const currencies = new Set(['USD', 'GBP', 'EUR', 'CAD', 'AUD']);
 
@@ -23,6 +24,7 @@ function isWorkItem(value: unknown): value is WorkItem {
   if (!record(value) || !exactKeys(value, ['id', 'date', 'client', 'project', 'description', 'status', 'amount', 'billed'])) return false;
   return stringFields(value, ['id', 'date', 'client', 'project', 'description', 'status'])
     && nonEmptyStringFields(value, ['date', 'client', 'project', 'description'])
+    && parseCalendarDate(value.date as string) !== null
     && typeof value.amount === 'number' && Number.isFinite(value.amount)
     && typeof value.billed === 'boolean';
 }
@@ -30,7 +32,8 @@ function isWorkItem(value: unknown): value is WorkItem {
 function isInvoice(value: unknown): value is Invoice {
   if (!record(value) || !exactKeys(value, ['id', 'date', 'number', 'client', 'project', 'status'])) return false;
   return stringFields(value, ['id', 'date', 'number', 'client', 'project', 'status'])
-    && nonEmptyStringFields(value, ['date', 'number', 'client']);
+    && nonEmptyStringFields(value, ['date', 'number', 'client'])
+    && parseCalendarDate(value.date as string) !== null;
 }
 
 function isDecision(value: unknown): value is Decision {

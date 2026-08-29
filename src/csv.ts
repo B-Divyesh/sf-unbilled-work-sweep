@@ -1,4 +1,5 @@
 import type { ImportKind, Invoice, Mapping, ParsedCsv, WorkItem } from './types';
+import { parseCalendarDate } from './dates';
 
 const aliases: Record<ImportKind, Record<string, string[]>> = {
   work: {
@@ -102,6 +103,7 @@ export function mapWork(csv: ParsedCsv, mapping: Mapping): WorkItem[] {
     ].filter(([, value]) => !value.trim()).map(([field]) => field);
     const issues: string[] = [];
     if (missing.length) issues.push(`${readableList(missing)} ${missing.length === 1 ? 'is' : 'are'} required`);
+    if (date.trim() && parseCalendarDate(date) === null) issues.push('date must use YYYY-MM-DD or M/D/YYYY and be a real calendar date');
 
     const amountText = safe(row, mapping, 'amount');
     const hoursText = safe(row, mapping, 'hours');
@@ -137,10 +139,10 @@ export function mapInvoices(csv: ParsedCsv, mapping: Mapping): Invoice[] {
     const project = safe(row, mapping, 'project');
     const missing = [['invoice date', date], ['invoice number', number], ['client', client]]
       .filter(([, value]) => !value.trim()).map(([field]) => field);
-    if (missing.length) failures.push({
-      row: index + 2,
-      issues: [`${readableList(missing)} ${missing.length === 1 ? 'is' : 'are'} required`]
-    });
+    const issues: string[] = [];
+    if (missing.length) issues.push(`${readableList(missing)} ${missing.length === 1 ? 'is' : 'are'} required`);
+    if (date.trim() && parseCalendarDate(date) === null) issues.push('invoice date must use YYYY-MM-DD or M/D/YYYY and be a real calendar date');
+    if (issues.length) failures.push({ row: index + 2, issues });
     return { id: idFor([date, number, client, project], index), date, number, client, project, status: safe(row, mapping, 'status') || 'issued' };
   });
   if (failures.length) invalidRows('Invoice', failures);

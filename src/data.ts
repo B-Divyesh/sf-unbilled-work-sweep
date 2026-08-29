@@ -1,4 +1,5 @@
 import type { Invoice, SweepState, WorkItem } from './types';
+import { parseCalendarDate } from './dates';
 
 export const emptyState = (): SweepState => ({ work: [], invoices: [], decisions: {}, checked: {}, currency: 'USD', importedAt: null });
 
@@ -39,7 +40,9 @@ export function suggestions(work: WorkItem, invoices: Invoice[]): { invoice: Inv
   return invoices.map((invoice) => {
     const clientScore = similarity(work.client, invoice.client);
     const projectScore = !invoice.project ? 0.7 : similarity(work.project, invoice.project);
-    const dateOk = !work.date || !invoice.date || invoice.date >= work.date;
+    const workDate = parseCalendarDate(work.date);
+    const invoiceDate = parseCalendarDate(invoice.date);
+    const dateOk = workDate !== null && invoiceDate !== null && invoiceDate >= workDate;
     return { invoice, score: dateOk ? clientScore * 0.65 + projectScore * 0.35 : 0 };
   }).filter(({ score }) => score >= 0.55).sort((a, b) => b.score - a.score);
 }

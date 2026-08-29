@@ -7,6 +7,20 @@
     "sandbox": "fresh browser context; upload two in-memory CSV fixtures and assert parsed rows, amount, and suggested invoice"
   },
   {
+    "id": "header-mapping",
+    "claim": "CSV headers do not need to match the app's field names because the user can map them before import",
+    "where": "README, CSV mapping panel",
+    "test": "npm test -- --grep @claim:header-mapping",
+    "sandbox": "fresh browser context; upload a CSV with unrelated header names, manually map each required field, and assert the row and value import"
+  },
+  {
+    "id": "missing-status",
+    "claim": "A completed-work CSV row with no status column is treated as completed",
+    "where": "README",
+    "test": "npm test -- --grep @claim:missing-status",
+    "sandbox": "fresh browser context; import work without a status column and assert it appears in the completed attention queue"
+  },
+  {
     "id": "validated-import",
     "claim": "Blank required cells and non-numeric amounts are rejected without replacing saved data",
     "where": "README, CSV mapping errors",
@@ -78,10 +92,10 @@
   },
   {
     "id": "invoice-date-guard",
-    "claim": "Invoices dated before the work are not suggested as matches",
-    "where": "README",
+    "claim": "Imports accept real YYYY-MM-DD and M/D/YYYY calendar dates, and invoices dated before the work are not suggested",
+    "where": "README, CSV mapping panel",
     "test": "npm test -- --grep @claim:invoice-date-guard",
-    "sandbox": "fresh browser context; import one work row and an otherwise matching earlier invoice, then assert no suggestion"
+    "sandbox": "fresh browser context; reproduce 10/1/2026 work versus 9/1/2026 invoice, assert no suggestion, accept a cross-year later invoice, then reject malformed and impossible dates without replacing data"
   },
   {
     "id": "demo-isolation",
@@ -89,6 +103,27 @@
     "where": "demo banner, privacy notice, README, demo contract",
     "test": "npm test -- --grep @claim:demo-isolation",
     "sandbox": "fresh browser context; retain a real row, review demo data, leave demo, then assert the real row remains and demo keys are gone"
+  },
+  {
+    "id": "demo-session-removal",
+    "claim": "Demo review data is removed when the browser session ends",
+    "where": "privacy notice",
+    "test": "npm test -- --grep @claim:demo-session-removal",
+    "sandbox": "review a demo row in one fresh browser context, close the context, open a second context, and assert the sample has no retained decision"
+  },
+  {
+    "id": "clear-workspace",
+    "claim": "Clear imported data removes the current workspace",
+    "where": "privacy notice, README, workspace control",
+    "test": "npm test -- --grep @claim:clear-workspace",
+    "sandbox": "fresh real workspace; import one row, confirm Clear imported data, reload, and assert the workspace remains empty"
+  },
+  {
+    "id": "license-storage",
+    "claim": "License verification stores only the license token and its latest verification result",
+    "where": "privacy notice",
+    "test": "npm test -- --grep @claim:license-storage",
+    "sandbox": "fresh browser context; mock one invalid Sociobot verification, then assert localStorage contains exactly the token and verdict keys with their expected values"
   },
   {
     "id": "free-core",

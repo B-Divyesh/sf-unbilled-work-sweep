@@ -22,6 +22,36 @@ test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) 
   await expect(page.getByText('Possible invoice:').first()).toBeVisible();
 });
 
+test('@claim:header-mapping imports manually mapped columns with unrelated header names', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'custom-export.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('when,who,engagement,details,value\n8/1/2026,Acme,Launch,Custom header row,275')
+  });
+  await expect(page.getByText('Dates must use YYYY-MM-DD or M/D/YYYY.')).toBeVisible();
+  await page.locator('select[name="date"]').selectOption('when');
+  await page.locator('select[name="client"]').selectOption('who');
+  await page.locator('select[name="project"]').selectOption('engagement');
+  await page.locator('select[name="description"]').selectOption('details');
+  await page.locator('select[name="amount"]').selectOption('value');
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByText('1 work rows imported.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Custom header row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('275');
+});
+
+test('@claim:missing-status treats a work row without a status column as completed', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'no-status.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,amount\n2026-08-01,Acme,Launch,No status row,180')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No status row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('180');
+  await expect(page.getByRole('heading', { name: '1 completed item to review' })).toBeVisible();
+});
+
 test('@claim:validated-import rejects blank required cells and non-numeric amounts without replacing saved work', async ({ page }) => {
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({
@@ -74,7 +104,7 @@ test('@claim:hours-times-rate calculates a missing amount from hours and rate', 
     name: 'hours.csv', mimeType: 'text/csv',
     buffer: Buffer.from('date,client,project,description,hours,rate\n2026-08-01,Acme,Site,Hourly design,2,75')
   });
-  await page.getByRole('button', { name: 'Import work' }).click();
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
   await expect(page.getByTestId('queue-total')).toContainText('150');
   await expect(page.getByRole('heading', { name: 'Hourly design' }).locator('xpath=ancestor::li')).toContainText('$150.00');
 });
@@ -180,12 +210,26 @@ test('@claim:offline-reload works offline after the first visit', async ({ page,
 
 test('@claim:invoice-date-guard never suggests an invoice dated before its work', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#file-work').setInputFiles({ name: 'work.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-10,Acme,Site,Later work,completed,100') });
-  await page.getByRole('button', { name: 'Import work' }).click();
-  await page.locator('#file-invoices').setInputFiles({ name: 'invoice.csv', mimeType: 'text/csv', buffer: Buffer.from('invoice date,invoice number,client,project\n2026-08-09,INV-1,Acme,Site') });
+  await page.locator('#file-work').setInputFiles({ name: 'work.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n10/1/2026,Acme,Launch,October work,completed,100\n12/31/2025,Beta,Renewal,Year end work,completed,200') });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await page.locator('#file-invoices').setInputFiles({ name: 'invoice.csv', mimeType: 'text/csv', buffer: Buffer.from('invoice date,invoice number,client,project\n9/1/2026,INV-OLD,Acme,Launch\n1/1/2026,INV-NEW,Beta,Renewal') });
   await page.getByRole('button', { name: 'Import invoices' }).click();
-  await expect(page.getByRole('heading', { name: 'Later work' }).locator('..')).toContainText('No invoice match found');
-  await expect(page.getByTestId('queue-total')).toContainText('100');
+  await expect(page.getByRole('heading', { name: 'October work' }).locator('..')).toContainText('No invoice match found');
+  await expect(page.getByRole('heading', { name: 'October work' }).locator('..')).not.toContainText('INV-OLD');
+  await expect(page.getByRole('heading', { name: 'Year end work' }).locator('..')).toContainText('Possible invoice: INV-NEW');
+  await expect(page.getByTestId('queue-total')).toContainText('300');
+
+  await page.locator('#file-invoices').setInputFiles({ name: 'invalid-invoice-date.csv', mimeType: 'text/csv', buffer: Buffer.from('invoice date,invoice number,client,project\nnot-a-date,INV-BAD,Beta,Renewal') });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  await expect(page.getByRole('alert')).toContainText('invoice date must use YYYY-MM-DD or M/D/YYYY and be a real calendar date');
+  await expect(page.getByRole('heading', { name: 'Year end work' }).locator('..')).toContainText('Possible invoice: INV-NEW');
+
+  await page.locator('#file-work').setInputFiles({ name: 'invalid-date.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\nnot-a-date,Acme,Launch,Bad date,completed,999\n2/30/2026,Acme,Launch,Impossible date,completed,999') });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('row 2: date must use YYYY-MM-DD or M/D/YYYY and be a real calendar date');
+  await expect(page.getByRole('alert')).toContainText('row 3: date must use YYYY-MM-DD or M/D/YYYY and be a real calendar date');
+  await expect(page.getByRole('heading', { name: 'October work' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('300');
 });
 
 test('@claim:paid-license uses the Sociobot checkout and verification contract', async ({ page }) => {
@@ -237,6 +281,56 @@ test('@claim:demo-isolation keeps demo data separate and discards it when leavin
   await expect(page.getByRole('heading', { name: 'Real workspace row' })).toBeVisible();
   const demoKeys = await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith('demo:')));
   expect(demoKeys).toEqual([]);
+});
+
+test('@claim:demo-session-removal removes reviewed demo state when the browser session ends', async ({ browser }) => {
+  const firstContext = await browser.newContext();
+  const firstPage = await firstContext.newPage();
+  await firstPage.goto('http://127.0.0.1:4173/demo');
+  await firstPage.getByRole('button', { name: 'Keep unbilled' }).first().click();
+  await expect(firstPage.getByText('Match reviewed. The work stays in the queue.')).toBeVisible();
+  expect(await firstPage.evaluate(() => sessionStorage.getItem('demo:unbilled-work-sweep'))).toContain('"kind":"keep"');
+  await firstContext.close();
+
+  const secondContext = await browser.newContext();
+  const secondPage = await secondContext.newPage();
+  await secondPage.goto('http://127.0.0.1:4173/demo');
+  await expect(secondPage.getByText('Reviewed · kept in queue')).toHaveCount(0);
+  const decisions = await secondPage.evaluate(() => JSON.parse(sessionStorage.getItem('demo:unbilled-work-sweep') ?? '{}').decisions);
+  expect(decisions).toEqual({});
+  await secondContext.close();
+});
+
+test('@claim:clear-workspace removes the current workspace and persists the empty state', async ({ page }) => {
+  await page.goto('/privacy');
+  await expect(page.getByText('Use “Clear imported data” to remove the current workspace.')).toBeVisible();
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({ name: 'clear-me.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Site,Clear this row,completed,125') });
+  await page.getByRole('button', { name: 'Import work' }).click();
+  await expect(page.getByRole('heading', { name: 'Clear this row' })).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Clear imported data' }).click();
+  await expect(page.getByText('Imported data cleared.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Clear this row' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText('Your attention queue will appear here')).toBeVisible();
+});
+
+test('@claim:license-storage stores only the license token and latest verification result', async ({ page }) => {
+  await page.route('https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=privacy-test', (route) => route.fulfill({ json: { valid: false, reason: 'invalid', expires_at: null } }));
+  await page.goto('/privacy');
+  await expect(page.getByText('This app stores only your license token and its latest verification result.')).toBeVisible();
+  await page.goto('/');
+  await page.getByLabel('Have a license? Paste it here').fill('privacy-test');
+  await page.getByRole('button', { name: 'Verify license' }).click();
+  await expect(page.getByText('License no longer active. Check the token or buy a new license.')).toBeVisible();
+  const stored = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+  expect(Object.keys(stored).sort()).toEqual([
+    'sb_license:unbilled-work-sweep',
+    'sb_license_verdict:unbilled-work-sweep'
+  ]);
+  expect(stored['sb_license:unbilled-work-sweep']).toBe('privacy-test');
+  expect(JSON.parse(stored['sb_license_verdict:unbilled-work-sweep'])).toEqual({ valid: false, checkedAt: expect.any(Number) });
 });
 
 test('@claim:free-core keeps imports, review, and checklist export available without a license', async ({ page }) => {

@@ -23,6 +23,7 @@ The free sweep includes imports, review, workspace backup, and checklist export.
 
 The importer asks you to map columns before it stores rows. Header names do not need to match these names exactly.
 Rows with blank required cells or non-numeric amounts are rejected with their CSV row numbers. Saved data remains unchanged so you can fix the file and try again.
+Dates may use `YYYY-MM-DD` or `M/D/YYYY`. Impossible dates and other formats are rejected before storage.
 
 Completed-work CSV:
 
