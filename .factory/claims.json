@@ -7,6 +7,13 @@
     "sandbox": "fresh browser context; upload two in-memory CSV fixtures and assert parsed rows, amount, and suggested invoice"
   },
   {
+    "id": "demo-sample-ready",
+    "claim": "One click opens an isolated sample with six work rows, two suggestions, four review rows, a $5,840 total, a working reset, and an actionable row in the first phone viewport",
+    "where": "landing first screen, demo first screen",
+    "test": "npm test -- --grep @claim:demo-sample-ready",
+    "sandbox": "fresh 390 by 844 browser context; click the landing demo action once, assert the sample composition and banner, measure the actionable row inside the viewport, change the total, then reset to the original sample"
+  },
+  {
     "id": "header-mapping",
     "claim": "CSV headers do not need to match the app's field names because the user can map them before import",
     "where": "README, CSV mapping panel",
@@ -25,7 +32,7 @@
     "claim": "A completed-work CSV row with no status column is treated as completed",
     "where": "README",
     "test": "npm test -- --grep @claim:missing-status",
-    "sandbox": "fresh browser context; import work without a status column and assert it appears in the completed attention queue"
+    "sandbox": "fresh browser context; import work without a status column and assert it appears in the unbilled-work list"
   },
   {
     "id": "validated-import",
@@ -42,6 +49,13 @@
     "sandbox": "fresh demo; link one suggestion, reload, then keyboard-unlink it and assert the row and full queue total return"
   },
   {
+    "id": "work-replacement",
+    "claim": "Replacing completed work keeps review decisions for unchanged rows and returns changed rows to the unbilled-work list",
+    "where": "README, work replacement status",
+    "test": "npm test -- --grep @claim:work-replacement",
+    "sandbox": "fresh browser context; review two imported rows, replace the CSV with one identical row and one changed row, then assert the unchanged decision remains and the changed row returns for review"
+  },
+  {
     "id": "invoice-replacement",
     "claim": "Replacing invoice data clears links to invoices that are no longer present",
     "where": "README, invoice replacement status",
@@ -50,7 +64,7 @@
   },
   {
     "id": "csv-export",
-    "claim": "Exports the attention queue as an invoice-draft checklist CSV",
+    "claim": "Exports the unbilled-work list as an invoice-draft checklist CSV",
     "where": "workspace toolbar, README",
     "test": "npm test -- --grep @claim:csv-export",
     "sandbox": "fresh demo; inspect the downloaded CSV header and assert one row per queue item"
@@ -63,11 +77,25 @@
     "sandbox": "fresh browser context; import a private row, review demo work, and assert that no request leaves the app origin"
   },
   {
+    "id": "network-boundary",
+    "claim": "CSV and demo actions make no off-origin requests; buying or verifying a license contacts api.sociobot.in",
+    "where": "privacy notice, README",
+    "test": "npm test -- --grep @claim:network-boundary",
+    "sandbox": "fresh browser context; log requests through import and demo actions, then intercept checkout and license verification and assert only those explicit actions contact api.sociobot.in"
+  },
+  {
     "id": "offline-reload",
     "claim": "Works offline after the first visit",
     "where": "landing facts, README",
     "test": "npm test -- --grep @claim:offline-reload",
     "sandbox": "fresh browser context; load the normal landing route, wait for its service worker, disable the HTTP cache and network, reload, and assert the landing workspace"
+  },
+  {
+    "id": "manifest-mime",
+    "claim": "The web app manifest is served as application/manifest+json",
+    "where": "PWA installation metadata",
+    "test": "npm test -- --grep @claim:manifest-mime",
+    "sandbox": "production build preview; request manifest.webmanifest, assert a manifest JSON content type, and assert the static deployment configuration sets application/manifest+json"
   },
   {
     "id": "runtime-asset-cache",
@@ -92,14 +120,14 @@
   },
   {
     "id": "paid-license",
-    "claim": "$19 one-time saved review tools use Sociobot checkout and license verification",
+    "claim": "$19 one-time review history uses Sociobot checkout and license verification",
     "where": "landing paid section, README, terms",
     "test": "npm test -- --grep @claim:paid-license",
     "sandbox": "fresh browser context; assert checkout URL, mock a valid Sociobot verification response, and assert paid state"
   },
   {
     "id": "snapshot-history",
-    "claim": "A paid license saves named reviews and shows their past list totals on this device",
+    "claim": "A paid license adds review history with named weekly list totals on this device",
     "where": "landing paid section, README",
     "test": "npm test -- --grep @claim:snapshot-history",
     "sandbox": "fresh browser context; mock a valid license, save two named demo reviews with different queue states, and assert both counts and values are visible"
@@ -120,7 +148,7 @@
   },
   {
     "id": "match-normalization",
-    "claim": "Suggestions compare normalized client and project names, and do not suggest a different project",
+    "claim": "Suggestions ignore capitalization, punctuation, and spacing in client and project names, and do not suggest a different project",
     "where": "README",
     "test": "npm test -- --grep @claim:match-normalization",
     "sandbox": "fresh browser context; import a client wording variation with a matching project and a same-client different-project near miss, then assert only the matching invoice is suggested"
@@ -158,11 +186,11 @@
     "claim": "Imports, review, and checklist exports stay free",
     "where": "landing paid section, README",
     "test": "npm test -- --grep @claim:free-core",
-    "sandbox": "fresh demo without a license; review a suggestion and download the checklist while snapshots remain marked paid"
+    "sandbox": "fresh demo without a license; review a suggestion and download the checklist while review history remains marked paid"
   },
   {
     "id": "billing-boundary",
-    "claim": "Saved review tools cost $19 once through Sociobot checkout; no payment form is embedded in the app",
+    "claim": "Review history costs $19 once through Sociobot checkout; no payment form is embedded in the app",
     "where": "landing paid section, README, terms",
     "test": "npm test -- --grep @claim:billing-boundary",
     "sandbox": "fresh browser context; assert the one-time copy, Sociobot checkout URL, and absence of payment iframes or card fields"

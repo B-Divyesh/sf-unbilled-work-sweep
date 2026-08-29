@@ -17,7 +17,7 @@ One-click demo: <https://unbilled-work-sweep.sociobot.in/demo>
 - Keeps real workspace data in IndexedDB on the device.
 - Works offline after the first successful visit.
 
-The free sweep includes imports, review, workspace backup, and checklist export. A $19 one-time license saves named reviews and shows their past list totals. Checkout and license verification use the Sociobot billing API; there is no embedded payment provider.
+Imports, review, workspace backup, and checklist export are free. A $19 one-time license adds review history with named weekly totals. Checkout and license verification use the Sociobot billing API; there is no embedded payment provider.
 
 ## CSV fields
 
@@ -37,7 +37,7 @@ Invoice CSV:
 - Required: invoice date, invoice number, client
 - Optional: project, status
 
-Suggestions compare normalized client and project names. A different project is not suggested. Invoice dates before work dates are not suggested. Every match remains a review choice, and linked matches can be returned to the list.
+Suggestions ignore capitalization, punctuation, and spacing when comparing client and project names. A different project is not suggested. Invoice dates before work dates are not suggested. Every match remains a review choice, and linked matches can be returned to the list.
 Replacing the invoice CSV clears links to invoices that are no longer present, returning that work to the list.
 Replacing completed-work CSV keeps review decisions only for unchanged rows. Changed work returns to the list for review.
 
@@ -73,7 +73,7 @@ All claim definitions are in [`.factory/claims.json`](.factory/claims.json). Dem
 
 ## Privacy and data ownership
 
-Real imports use IndexedDB. Demo actions use the separate `demo:unbilled-work-sweep` session-storage key. CSV rows do not leave the browser. A request goes to `api.sociobot.in` only when a user adds or verifies a paid license.
+Real imports use IndexedDB. Demo actions use the separate `demo:unbilled-work-sweep` session-storage key. CSV and demo actions make no off-origin requests. Buying or verifying a license contacts `api.sociobot.in`.
 
 Use **Export workspace** for a JSON backup. Use **Clear imported data** to remove the active workspace. The on-site [privacy notice](https://unbilled-work-sweep.sociobot.in/privacy) and [terms](https://unbilled-work-sweep.sociobot.in/terms) are available as real routes.
 

@@ -41,7 +41,7 @@ function footer(): string {
 }
 
 function demoBanner(): string {
-  return `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span>Try every review and export step.</span><div><button class="text-button" data-action="reset-demo">Reset demo</button><button class="text-button" data-action="start-real">Start for real</button></div></aside>`;
+  return `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span>Link or keep a suggested match, then export the list.</span><div><button class="text-button" data-action="reset-demo">Reset demo</button><button class="text-button" data-action="start-real">Start for real</button></div></aside>`;
 }
 
 function notice(): string {
@@ -58,7 +58,7 @@ function homePage(): string {
       <div class="hero-copy"><p class="eyebrow">Completed work to review before invoicing</p><h1 tabindex="-1">Find finished work you have not billed</h1><p class="lede">For freelancers and tiny agencies with work spread across task, time, and invoice tools.</p>
         <div class="hero-actions"><a class="button primary" href="/demo" data-route>Try it with sample data</a><span>See a filled review in one click.</span></div>
         <a class="secondary-link" href="#sweep">Or import your CSV files</a>
-        <ul class="plain-facts" aria-label="Product facts"><li>Files stay in this browser.</li><li>Works offline after your first visit.</li><li>Free sweep; $19 one-time saved review tools.</li></ul>
+        <ul class="plain-facts" aria-label="Product facts"><li>Files stay in this browser.</li><li>Works offline after your first visit.</li><li>Imports and checklist exports are free. Review history costs $19 once.</li></ul>
       </div>
       <figure class="hero-art"><picture><source media="(max-width: 700px)" srcset="/assets/paperwork-garden-720.webp"><img src="/assets/paperwork-garden-1200.webp" width="1200" height="800" alt="Paper invoices form a moonlit landscape where coral envelopes flow toward a filing box." fetchpriority="high" decoding="async"></picture><figcaption>Review completed work that may still need an invoice.</figcaption></figure>
     </section>
@@ -70,8 +70,8 @@ function homePage(): string {
 }
 
 function paidSection(): string {
-  const label = licensed ? 'License active' : 'Buy saved review tools';
-  return `<section id="paid" class="paid-section" aria-labelledby="paid-title"><div><p class="eyebrow">Paid saved reviews</p><h2 id="paid-title">Save repeat reviews for $19 once</h2><p>Keep named weekly snapshots and compare past list totals on this device. Core imports and checklist exports stay free.</p></div><div class="license-box"><a class="button primary" href="${CHECKOUT}" rel="noreferrer">${label}</a><p>Checkout opens through Sociobot. One payment; no subscription.</p><form id="license-form"><label for="license">Have a license? Paste it here</label><div class="inline-form"><input id="license" name="license" autocomplete="off" spellcheck="false"><button type="submit">Verify license</button></div></form><p class="fine-print">Buying means you accept the <a href="/terms" data-route>terms</a> and <a href="/privacy" data-route>privacy notice</a>.</p></div></section>`;
+  const label = licensed ? 'Review history active' : 'Buy review history — $19';
+  return `<section id="paid" class="paid-section" aria-labelledby="paid-title"><div><p class="eyebrow">Saved review history</p><h2 id="paid-title">Save weekly review totals for a one-time $19</h2><p>Name each weekly review and compare earlier list totals on this device. Imports and checklist exports stay free.</p></div><div class="license-box"><a class="button primary" href="${CHECKOUT}" rel="noreferrer">${label}</a><p>Checkout opens through Sociobot. One payment; no subscription.</p><form id="license-form"><label for="license">Have a license? Paste it here</label><div class="inline-form"><input id="license" name="license" autocomplete="off" spellcheck="false"><button type="submit">Verify license</button></div></form><p class="fine-print">Buying means you accept the <a href="/terms" data-route>terms</a> and <a href="/privacy" data-route>privacy notice</a>.</p></div></section>`;
 }
 
 function importCard(kind: ImportKind): string {
@@ -109,11 +109,13 @@ function workspace(): string {
   const total = queue.reduce((sum, work) => sum + work.amount, 0);
   const linked = Object.values(state.decisions).filter((item) => item.kind === 'linked').length;
   const hasData = state.work.length || state.invoices.length;
-  return `<div class="workspace" data-testid="workspace"><section class="import-section" aria-labelledby="import-title"><h2 id="import-title" class="sr-only">Import CSV files</h2><div class="import-grid">${importCard('work')}${importCard('invoices')}</div>${mappingPanel()}</section>
-    ${hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Unbilled-work list</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
-      <div class="toolbar"><label>Currency<select id="currency" aria-label="Display currency"><option ${state.currency === 'USD' ? 'selected' : ''}>USD</option><option ${state.currency === 'GBP' ? 'selected' : ''}>GBP</option><option ${state.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${state.currency === 'CAD' ? 'selected' : ''}>CAD</option><option ${state.currency === 'AUD' ? 'selected' : ''}>AUD</option></select></label><div><button data-action="export-checklist" ${queue.length ? '' : 'disabled'}>Export checklist CSV</button><button class="ghost" data-action="export-workspace">Export workspace</button><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import workspace</label></div></div>
-      ${queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><p class="empty-title">No completed work needs review</p><p>Import more work, or unlink a match to bring it back.</p></div>`}
-      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your unbilled-work list will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label></div>`}</div>`;
+  const importSection = `<section class="import-section" aria-labelledby="import-title"><h2 id="import-title" class="sr-only">Import CSV files</h2><div class="import-grid">${importCard('work')}${importCard('invoices')}</div>${mappingPanel()}</section>`;
+  const toolbar = `<div class="toolbar"><label>Currency<select id="currency" aria-label="Display currency"><option ${state.currency === 'USD' ? 'selected' : ''}>USD</option><option ${state.currency === 'GBP' ? 'selected' : ''}>GBP</option><option ${state.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${state.currency === 'CAD' ? 'selected' : ''}>CAD</option><option ${state.currency === 'AUD' ? 'selected' : ''}>AUD</option></select></label><div><button data-action="export-checklist" ${queue.length ? '' : 'disabled'}>Export checklist CSV</button><button class="ghost" data-action="export-workspace">Export workspace</button><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import workspace</label></div></div>`;
+  const workList = queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><p class="empty-title">No completed work needs review</p><p>Import more work, or unlink a match to bring it back.</p></div>`;
+  const queueSection = hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Unbilled-work list</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
+      ${isDemo ? `${workList}${toolbar}` : `${toolbar}${workList}`}
+      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save review total' : 'Review history · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your unbilled-work list will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label></div>`;
+  return `<div class="workspace${isDemo ? ' demo-workspace' : ''}" data-testid="workspace">${isDemo && hasData ? `${queueSection}${importSection}` : `${importSection}${queueSection}`}</div>`;
 }
 
 function snapshotList(): string {
@@ -126,13 +128,13 @@ function snapshotList(): string {
 
 function demoPage(): string {
   const queue = queueFor(state);
-  return `${header()}${demoBanner()}<main id="main" class="demo-main"><section class="demo-heading"><p class="eyebrow">Friday, 28 August</p><h1 tabindex="-1">Review work before you invoice</h1><p>This sample has ${state.work.length} work rows and ${state.invoices.length} possible invoice matches. Review each suggestion, then export the list.</p></section>${notice()}${workspace()}<section class="demo-help"><h2>What to try</h2><p>Link the Morrow invoice. Keep North Star in the list. Check an item, then export ${queue.length} rows.</p></section></main>${footer()}`;
+  return `${header()}${demoBanner()}<main id="main" class="demo-main"><section class="demo-heading"><p class="eyebrow">Ready-to-review sample</p><h1 tabindex="-1">Review work before you invoice</h1><p>Six work rows, two suggested matches, and four items to review.</p></section>${notice()}${workspace()}<section class="demo-help"><h2>What to try</h2><p>Link the Morrow invoice. Keep North Star in the list. Check an item, then export ${queue.length} rows.</p></section></main>${footer()}`;
 }
 
 function legalPage(kind: 'privacy' | 'terms'): string {
   const privacy = kind === 'privacy';
   const title = privacy ? 'Your files stay on this device' : 'Terms for using this tool';
-  const body = privacy ? `<p>Unbilled Work Sweep stores real imports in your browser’s IndexedDB. Demo data uses separate session storage and is removed when that browser session ends.</p><h2>What leaves your device</h2><p>Your CSV rows do not leave your device.</p><h2>What you can remove</h2><p>Use “Clear imported data” to remove the current workspace. You can also clear this site’s browser storage.</p><h2>Paid license storage</h2><p>This app stores only your license token and its latest verification result.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with privacy questions.</p>` : `<p>Unbilled Work Sweep is a review aid. It does not provide tax, legal, or accounting advice.</p><h2>Your responsibility</h2><p>Check every suggested invoice match before using the exported checklist. Keep your original source exports.</p><h2>Paid license</h2><p>The $19 purchase is a one-time license for saved review tools. Checkout opens through Sociobot.</p><h2>Availability</h2><p>The software is provided “as is” without a promise that every export format will map automatically.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> for license help.</p>`;
+  const body = privacy ? `<p>Unbilled Work Sweep stores real imports in your browser’s IndexedDB. Demo data uses separate session storage and is removed when that browser session ends.</p><h2>What leaves your device</h2><p>CSV and demo actions make no off-origin requests. Buying or verifying a license contacts api.sociobot.in.</p><h2>What you can remove</h2><p>Use “Clear imported data” to remove the current workspace. You can also clear this site’s browser storage.</p><h2>Paid license storage</h2><p>This app stores only your license token and its latest verification result.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with privacy questions.</p>` : `<p>Unbilled Work Sweep is a review aid. It does not provide tax, legal, or accounting advice.</p><h2>Your responsibility</h2><p>Check every suggested invoice match before using the exported checklist. Keep your original source exports.</p><h2>Paid license</h2><p>The $19 purchase is a one-time license for review history. Checkout opens through Sociobot.</p><h2>Availability</h2><p>The software is provided “as is” without a promise that every export format will map automatically.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> for license help.</p>`;
   return `${header()}<main id="main" class="legal"><p class="eyebrow">${privacy ? 'Privacy' : 'Terms'} · updated 28 August 2026</p><h1 tabindex="-1">${title}</h1>${body}</main>${footer()}`;
 }
 
@@ -317,11 +319,11 @@ async function action(name: string): Promise<void> {
   if (name === 'undo-clear' && undoState) { state = undoState; undoState = null; await saveState(state, isDemo); message = 'Imported data restored.'; await render(); }
   if (name === 'save-snapshot') {
     if (!licensed) { if (currentPath() === '/') document.querySelector('#paid')?.scrollIntoView({ behavior: 'smooth' }); else await navigate('/#paid'); return; }
-    const nameValue = prompt('Name this sweep snapshot', `Week of ${new Date().toLocaleDateString()}`); if (!nameValue) return;
+    const nameValue = prompt('Name this weekly review', `Week of ${new Date().toLocaleDateString()}`); if (!nameValue) return;
     const queue = queueFor(state); const snapshotStore = isDemo ? sessionStorage : localStorage; const snapshotKey = isDemo ? 'demo:unbilled:snapshots' : 'unbilled:snapshots';
     const snapshots = JSON.parse(snapshotStore.getItem(snapshotKey) ?? '[]') as unknown[];
     snapshots.unshift({ name: nameValue, date: new Date().toISOString().slice(0, 10), count: queue.length, value: queue.reduce((sum, work) => sum + work.amount, 0) });
-    snapshotStore.setItem(snapshotKey, JSON.stringify(snapshots)); message = 'Review snapshot saved on this device.'; await render();
+    snapshotStore.setItem(snapshotKey, JSON.stringify(snapshots)); message = 'Review total saved on this device.'; await render();
   }
   if (name === 'apply-update' && waitingServiceWorker) {
     const reload = () => location.reload();
@@ -338,8 +340,8 @@ async function verifyLicense(token: string, announce = false): Promise<void> {
     const verdict = await response.json() as { valid: boolean; reason?: string };
     localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: verdict.valid, checkedAt: Date.now() }));
     licensed = verdict.valid;
-    if (announce) message = verdict.valid ? 'License verified. Saved review tools are active.' : 'License no longer active. Check the token or buy a new license.';
-  } catch { if (announce) error = 'The license check could not connect. Your free sweep still works; try again when online.'; }
+    if (announce) message = verdict.valid ? 'License verified. Review history is active.' : 'License no longer active. Check the token or buy a new license.';
+  } catch { if (announce) error = 'The license check could not connect. Imports and exports still work; try again when online.'; }
   await render();
 }
 
@@ -407,7 +409,12 @@ function registerServiceWorker(): void {
 // a new load listener then means it never fires and leaves the app offline.
 registerServiceWorker();
 
-window.addEventListener('popstate', async () => { state = await loadState(currentPath() === '/demo'); await render(true); });
+window.addEventListener('popstate', async () => {
+  const demoRoute = currentPath() === '/demo' || new URLSearchParams(location.search).get('demo') === '1';
+  state = await loadState(demoRoute);
+  if (demoRoute && state.work.length === 0) { state = sampleState(); await saveState(state, true); }
+  await render(true);
+});
 window.addEventListener('online', () => void render());
 window.addEventListener('offline', () => void render());
 

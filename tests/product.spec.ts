@@ -4,6 +4,39 @@ import { readFile } from 'node:fs/promises';
 import { sampleState } from '../src/data';
 import { isSweepState } from '../src/validation';
 
+test('@claim:demo-sample-ready opens a complete actionable sample in one click', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Try it with sample data' }).click();
+  await expect(page).toHaveURL(/\/demo$/u);
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.locator('.import-card').first()).toContainText('6 rows imported');
+  await expect(page.locator('.match-box')).toHaveCount(2);
+  await expect(page.locator('.work-slip')).toHaveCount(4);
+  await expect(page.getByTestId('queue-total')).toContainText('$5,840.00');
+
+  const visibleTargets = [
+    page.getByTestId('queue-total'),
+    page.locator('.work-slip').first(),
+    page.locator('.match-box').first(),
+    page.getByRole('button', { name: 'Link invoice' }).first()
+  ];
+  for (const target of visibleTargets) {
+    const box = await target.boundingBox();
+    expect(box, 'expected a demo target bounding box').not.toBeNull();
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(844);
+  }
+  expect(await page.evaluate(() => sessionStorage.getItem('demo:unbilled-work-sweep'))).toContain('Final responsive page build');
+  expect(await page.evaluate(() => localStorage.getItem('unbilled-work-sweep'))).toBeNull();
+  await page.getByRole('button', { name: 'Link invoice' }).first().click();
+  await expect(page.getByTestId('queue-total')).toContainText('$3,640.00');
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  await expect(page.getByText('Demo reset to its original sample.')).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('$5,840.00');
+  await expect(page.getByRole('button', { name: 'Link invoice' })).toHaveCount(2);
+});
+
 test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) => {
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({
@@ -226,6 +259,33 @@ test('@claim:invoice-replacement clears links to invoices missing from the repla
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
 });
 
+test('@claim:work-replacement keeps unchanged reviews and clears changed work reviews', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'original-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Launch,Unchanged reviewed work,completed,100\n2026-08-02,Beta,Site,Work that will change,completed,200')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await page.locator('#file-invoices').setInputFiles({
+    name: 'invoices.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('invoice date,invoice number,client,project\n2026-08-03,INV-ACME,Acme,Launch\n2026-08-03,INV-BETA,Beta,Site')
+  });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  await page.getByRole('heading', { name: 'Unchanged reviewed work' }).locator('..').getByRole('button', { name: 'Link invoice' }).click();
+  await page.getByRole('heading', { name: 'Work that will change' }).locator('..').getByRole('button', { name: 'Keep unbilled' }).click();
+
+  await page.locator('#file-work').setInputFiles({
+    name: 'replacement-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Launch,Unchanged reviewed work,completed,100\n2026-08-02,Beta,Site,Changed work returns,completed,250')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByText('2 work rows imported. 1 prior review decision was cleared because that work changed.')).toBeVisible();
+  await expect(page.locator('.linked-matches')).toContainText('Unchanged reviewed work');
+  await expect(page.getByRole('heading', { name: 'Changed work returns' })).toBeVisible();
+  await expect(page.getByText('Work that will change')).toHaveCount(0);
+  await expect(page.getByTestId('queue-total')).toContainText('250');
+});
+
 test('@claim:csv-export exports one checklist row per queue item', async ({ page }) => {
   await page.goto('/demo');
   const downloadPromise = page.waitForEvent('download');
@@ -255,6 +315,32 @@ test('@claim:local-only sends no imported or demo review rows off-device', async
   expect(offOrigin).toEqual([]);
 });
 
+test('@claim:network-boundary contacts Sociobot only for explicit license actions', async ({ page }) => {
+  const offOrigin: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') offOrigin.push(request.url());
+  });
+  await page.route('https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=boundary-license', (route) => route.fulfill({ json: { valid: true, reason: 'ok', expires_at: null } }));
+  await page.route('https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Hosted checkout</title>' }));
+
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({ name: 'private.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Private Client,Secret Job,Private task,completed,100') });
+  await page.getByRole('button', { name: 'Import work' }).click();
+  await page.goto('/demo');
+  await page.getByRole('button', { name: 'Keep unbilled' }).first().click();
+  expect(offOrigin).toEqual([]);
+
+  await page.goto('/');
+  await page.getByLabel('Have a license? Paste it here').fill('boundary-license');
+  await page.getByRole('button', { name: 'Verify license' }).click();
+  await expect(page.getByText('License verified. Review history is active.')).toBeVisible();
+  await page.getByRole('link', { name: 'Review history active' }).click();
+  await expect.poll(() => offOrigin).toEqual([
+    'https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=boundary-license',
+    'https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout'
+  ]);
+});
+
 test('@claim:offline-reload works offline after the first visit', async ({ page, context }) => {
   await page.goto(`http://pwa-offline-${Date.now()}.localhost:4173/`);
   await expect.poll(() => page.evaluate(async () => Boolean(await navigator.serviceWorker.getRegistration()))).toBe(true);
@@ -280,6 +366,15 @@ test('@claim:offline-reload works offline after the first visit', async ({ page,
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Find finished work you have not billed' })).toBeVisible();
   await expect(page.getByTestId('workspace')).toBeVisible();
+});
+
+test('@claim:manifest-mime serves the web app manifest with a manifest JSON content type', async ({ request }) => {
+  const response = await request.get('/manifest.webmanifest');
+  expect(response.ok()).toBe(true);
+  expect(response.headers()['content-type']).toMatch(/^application\/(?:manifest\+json|json)(?:;|$)/u);
+  const config = JSON.parse(await readFile('public/staticwebapp.config.json', 'utf8')) as { routes: Array<{ route: string; headers?: Record<string, string> }> };
+  const manifestRoute = config.routes.find((route) => route.route === '/manifest.webmanifest');
+  expect(manifestRoute?.headers?.['Content-Type']).toBe('application/manifest+json');
 });
 
 test('@claim:runtime-asset-cache stores a fetched same-origin asset for offline reuse', async ({ page }) => {
@@ -332,14 +427,14 @@ test('@claim:match-normalization suggests matching client and project wording, n
 test('@claim:paid-license uses the Sociobot checkout and verification contract', async ({ page }) => {
   await page.route('https://api.sociobot.in/api/v1/products/unbilled-work-sweep/verify?license=test-license', (route) => route.fulfill({ json: { valid: true, reason: 'ok', expires_at: null } }));
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Buy saved review tools' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout');
+  await expect(page.getByRole('link', { name: 'Buy review history — $19' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout');
   await page.getByLabel('Have a license? Paste it here').fill('test-license');
   await page.getByRole('button', { name: 'Verify license' }).click();
-  await expect(page.getByText('License verified. Saved review tools are active.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'License active' })).toBeVisible();
+  await expect(page.getByText('License verified. Review history is active.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Review history active' })).toBeVisible();
   await page.goto('/demo');
   page.once('dialog', (dialog) => dialog.accept('Friday sweep'));
-  await page.getByRole('button', { name: 'Save named snapshot' }).click();
+  await page.getByRole('button', { name: 'Save review total' }).click();
   await expect(page.getByText('Friday sweep')).toBeVisible();
   await expect(page.locator('.snapshots').getByText(/4 items/)).toBeVisible();
 });
@@ -351,12 +446,12 @@ test('@claim:snapshot-history saves two named review totals on this device', asy
   await page.getByRole('button', { name: 'Verify license' }).click();
   await page.goto('/demo');
   page.once('dialog', (dialog) => dialog.accept('Before invoice review'));
-  await page.getByRole('button', { name: 'Save named snapshot' }).click();
+  await page.getByRole('button', { name: 'Save review total' }).click();
   await expect(page.locator('.snapshots')).toContainText('Before invoice review');
   await expect(page.locator('.snapshots')).toContainText('4 items · $5,840.00');
   await page.getByRole('button', { name: 'Link invoice' }).first().click();
   page.once('dialog', (dialog) => dialog.accept('After invoice review'));
-  await page.getByRole('button', { name: 'Save named snapshot' }).click();
+  await page.getByRole('button', { name: 'Save review total' }).click();
   await expect(page.locator('.snapshots')).toContainText('After invoice review');
   await expect(page.locator('.snapshots')).toContainText('3 items · $3,640.00');
   await expect(page.locator('.snapshots li')).toHaveCount(2);
@@ -450,7 +545,7 @@ test('@claim:license-storage stores only the license token and latest verificati
 
 test('@claim:free-core keeps imports, review, and checklist export available without a license', async ({ page }) => {
   await page.goto('/demo');
-  await expect(page.getByRole('button', { name: 'Save snapshots · paid' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Review history · paid' })).toBeVisible();
   await page.getByRole('button', { name: 'Keep unbilled' }).first().click();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export checklist CSV' }).click();
@@ -460,7 +555,7 @@ test('@claim:free-core keeps imports, review, and checklist export available wit
 test('@claim:billing-boundary uses one Sociobot checkout link with no embedded payment form', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('One payment; no subscription.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Buy saved review tools' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout');
+  await expect(page.getByRole('link', { name: 'Buy review history — $19' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout');
   await expect(page.locator('iframe, input[name*="card" i], input[autocomplete="cc-number"]')).toHaveCount(0);
 });
 
@@ -562,6 +657,16 @@ test('routes, keyboard landmarks, and serious accessibility issues pass', async 
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Privacy' }).first().click();
+  await expect(page).toHaveURL(/\/privacy$/u);
+  await expect(page).toHaveTitle('Privacy — Unbilled Work Sweep');
+  await expect(page.getByRole('heading', { name: 'Your files stay on this device' })).toBeFocused();
+  await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/terms');
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: 'Find finished work you have not billed' })).toBeFocused();
+  await page.goForward();
+  await expect(page.getByRole('heading', { name: 'Your files stay on this device' })).toBeFocused();
 });
 
 test('the static 404 fallback has the product skeleton, literal copy, and route metadata', async ({ page }) => {
@@ -589,7 +694,7 @@ test('demo heading order and persistent controls meet the accessibility contract
   const results = await new AxeBuilder({ page }).withRules(['heading-order']).analyze();
   expect(results.violations).toEqual([]);
   await expect(page.locator('h1').first()).toHaveText('Review work before you invoice');
-  await expect(page.locator('h2').first()).toHaveText('Import CSV files');
+  await expect(page.locator('h2').first()).toHaveText('4 completed items to review');
   const targets = await page.locator('.demo-banner button').evaluateAll((buttons) => buttons.map((button) => {
     const bounds = button.getBoundingClientRect();
     return { name: button.textContent?.trim(), width: bounds.width, height: bounds.height };
@@ -615,7 +720,7 @@ test('keyboard focus is visibly transferred to all three file chooser labels at 
   await page.goto('/demo');
 
   for (const id of ['file-work', 'file-invoices', 'import-workspace']) {
-    for (let step = 0; step < 24 && await page.evaluate((target) => document.activeElement?.id !== target, id); step += 1) {
+    for (let step = 0; step < 80 && await page.evaluate((target) => document.activeElement?.id !== target, id); step += 1) {
       await page.keyboard.press('Tab');
     }
     await expect(page.locator(`#${id}`)).toBeFocused();
@@ -632,6 +737,8 @@ test('keyboard focus is visibly transferred to all three file chooser labels at 
 test('query demo entry and invalid CSV error state work', async ({ page }) => {
   await page.goto('/?demo=1');
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('5,840');
+  expect(await page.evaluate(() => sessionStorage.getItem('demo:unbilled-work-sweep'))).not.toBeNull();
   await page.getByRole('button', { name: 'Start for real' }).click();
   await page.locator('#file-work').setInputFiles({ name: 'broken.csv', mimeType: 'text/csv', buffer: Buffer.from('only-one-header\nvalue') });
   await expect(page.getByRole('alert')).toContainText('header row and at least one data row');
@@ -660,4 +767,19 @@ test('the 390px landing page tolerates 200% text sizing', async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.getByRole('link', { name: 'Try it with sample data' })).toBeVisible();
+});
+
+test('all three first-screen facts fit at phone and desktop review sizes', async ({ page }) => {
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    const facts = page.locator('.plain-facts li');
+    await expect(facts).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      const box = await facts.nth(index).boundingBox();
+      expect(box, `fact ${index + 1} at ${viewport.width}x${viewport.height}`).not.toBeNull();
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+    }
+  }
 });
