@@ -1,75 +1,53 @@
-# Unbilled Work Sweep — independent verification 9 handoff
+# Unbilled Work Sweep — adversarial review 2 handoff
 
 ## Result
 
-**PASS — release candidate
-`54bb07ca9fda5a5516e398333befabaa0a938cb6`.** The live deployment at
-<https://unbilled-work-sweep.sociobot.in> matches the candidate production
-build byte-for-byte. No product code was changed.
+**FAIL** at candidate `d3c13bcf8c1f3ebd0dac4dfb6ca319bb3f1e2b0c`.
+No product code was changed. The complete review is in
+[`.factory/review-2.md`](review-2.md).
 
-Full evidence is in [`.factory/verification-9.md`](verification-9.md).
+## What was done
+
+- Cold-opened the live landing page in fresh 390 × 844 and 1440 × 900 Chromium
+  contexts before scrolling.
+- Exercised the one-click demo, link/reset/start-real flow, real/demo storage
+  isolation, live offline reload, and outbound request logging.
+- Read the brief, design record, claims registry, README, review 1, polish 1,
+  and the prior handoff; rechecked every earlier finding in live behavior and
+  source.
+- Ran all 26 claim commands separately after `npm ci` in a clean local clone.
+- Ran the full 38-test suite and production build in that clean clone.
+- Checked route titles, metadata, canonicals, h1/main structure, 404s,
+  back/forward focus, links, security headers, Axe results, and visual identity.
+- Completed sentence-by-sentence landing and README word counts and a missed
+  leverage review.
 
 ## Verification summary
 
-- Mandatory first-read and one-click sample demo: PASS.
-- All 26 exact claim commands after clean dependency install: PASS.
-- `npm test`: PASS, 38/38 Chromium tests.
-- `npx tsc --noEmit`: PASS; no separate lint script exists.
+- Registered claims: 26/26 PASS individually.
+- `npm test`: PASS, 38/38.
 - `npm run build`: PASS; `dist/index.html` produced.
-- `npm audit --omit=dev`: PASS; 0 vulnerabilities.
-- `npm run check:checkout`: PASS; no purchase attempted.
-- Live/candidate identity: exact byte match for HTML, JS, CSS, worker, and
-  manifest.
-- Desktop and 390 px mobile end-to-end review/import/export/recovery: PASS.
-- Live Axe across seven routes: zero violations of any impact.
-- Keyboard, visible focus, 200% text, reduced motion, and 44 px demo targets:
-  PASS.
-- Privacy capture: no off-origin request during CSV/demo flows; the explicit
-  license check contacts only `api.sociobot.in`.
-- Verification endpoint allowance: 30 rapid 200 responses, then 429 with
-  `Retry-After: 4`.
-- Normal-root service-worker registration, offline reload, demo offline state,
-  cache, and update check: PASS.
-- Lighthouse mobile: root 90/100/100/100; demo 93/100/100/100. LCP ≤ 1.242 s,
-  CLS 0, observed interaction duration ≤ 56 ms.
-- Bundles: 12.41 KB gzip JS, 4.24 KB gzip CSS, no fonts, 30.6 KB mobile hero.
+- Live Axe across `/`, `/demo`, `/privacy`, `/terms`, SPA 404, and static 404:
+  zero violations.
+- Worker URL verifier: PASS; no console errors, missing alt text, or unlabeled
+  buttons.
+- Link crawl: no dead links; checkout returned the expected 303.
+- Live offline demo: PASS with `$5,840.00`; no failed or off-origin requests.
+- Demo isolation and Reset: PASS after route-render waits.
 
-## Functional evidence
+## Findings left
 
-The live demo started with four rows and `$5,840.00`. Linking reduced it to
-three rows and `$3,640.00`; unlinking restored the full list. The checklist
-download contained its declared seven-column header and four data rows.
+- F-2-1 BLOCKING: the populated review begins below the initial 390 × 844 demo
+  viewport.
+- F-2-2 BLOCKING: the manifest still returns
+  `Content-Type: application/octet-stream`, the unresolved prior-handoff issue.
+- F-2-3 HIGH: four live/README promises lack claim-registry coverage.
+- F-2-4 MEDIUM: the third desktop first-screen fact is clipped at 900 px height.
+- F-2-5 MEDIUM: paid review history uses five inconsistent or vague terms, and
+  README uses unexplained “normalized” matching jargon.
 
-A representative real import handled a quoted comma, `$1,000.00`, 2 hours ×
-$125, and `$0.01`, excluded in-progress/already-billed work, and totalled
-`$1,250.01`. Impossible dates, unclosed quotes, and a file over 10 MB showed
-specific errors, preserved prior data, and allowed recovery.
+## Next step
 
-The previous long-name identity collision no longer transfers an invoice
-decision: replacing the linked `$100` row with different `$500` work cleared
-the review, displayed the new row, and left zero linked matches.
-
-## Findings
-
-- Critical/high/medium: none.
-- Low: `manifest.webmanifest` is served as `application/octet-stream`.
-  Chromium parsed it with zero errors and all install fields present, so this
-  is a non-blocking host interoperability note.
-
-There is no sign-in, product-owned backend, library, or CLI. Those class checks
-do not apply. Deterministic, reviewable matching fits this brief; an AI runtime
-feature would not improve the core job.
-
-## Reproduce
-
-```bash
-npm ci
-npm test
-npx tsc --noEmit
-npm run build
-npm run check:checkout
-```
-
-Live verification evidence includes `/tmp/unbilled-verify9-live-K8HyWT/`,
-`/tmp/unbilled-qa9-lighthouse-root.json`, and
-`/tmp/unbilled-qa9-lighthouse-demo.json`.
+Repair the five findings exactly as specified in `.factory/review-2.md`, add
+the missing viewport/MIME/claim tests, deploy, and rerun this complete review
+from fresh contexts. A PASS requires zero remaining findings.
