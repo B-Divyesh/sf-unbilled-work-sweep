@@ -58,7 +58,7 @@ h3 { font-size: 1.12rem; line-height: 1.25; }
 .button.primary { background: var(--coral); color: #fff; }
 .button.secondary { background: var(--paper-bright); }
 .button.ghost, button.ghost, .buttonish.ghost { box-shadow: none; background: transparent; }
-.secondary-link { display: inline-block; font-weight: 750; margin: 2px 0 28px; }
+.secondary-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 750; margin: 2px 0 28px; }
 .plain-facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; font-size: .94rem; color: #354358; }
 .plain-facts li::before { content: "—"; color: var(--coral-dark); font-weight: 900; margin-right: 8px; }
 .hero-art { position: relative; margin: 0 -9vw 0 0; align-self: center; animation: place-paper 700ms cubic-bezier(.2,.8,.2,1) both; }

@@ -22,7 +22,7 @@ The free sweep includes imports, review, workspace backup, and checklist export.
 ## CSV fields
 
 The importer asks you to map columns before it stores rows. Header names do not need to match these names exactly.
-Rows with blank required cells or non-numeric amounts are rejected with their CSV row numbers. Saved data remains unchanged so you can fix the file and try again.
+Rows with blank required cells, non-numeric amounts, or overflowing hours × rate calculations are rejected with their CSV row numbers. Saved data remains unchanged so you can fix the file and try again.
 Dates may use `YYYY-MM-DD` or `M/D/YYYY`. Impossible dates and other formats are rejected before storage.
 
 Completed-work CSV:
@@ -39,6 +39,7 @@ Invoice CSV:
 
 Suggestions compare normalized client and project names. A different project is not suggested. Invoice dates before work dates are not suggested. Every match remains a review choice, and linked matches can be returned to the list.
 Replacing the invoice CSV clears links to invoices that are no longer present, returning that work to the list.
+Replacing completed-work CSV keeps review decisions only for unchanged rows. Changed work returns to the list for review.
 
 ## Run locally
 

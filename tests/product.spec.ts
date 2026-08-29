@@ -78,6 +78,8 @@ test('@claim:missing-status treats a work row without a status column as complet
 });
 
 test('@claim:validated-import rejects blank required cells and non-numeric amounts without replacing saved work', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({
     name: 'valid-work.csv', mimeType: 'text/csv',
@@ -97,6 +99,17 @@ test('@claim:validated-import rejects blank required cells and non-numeric amoun
   await expect(page.getByRole('alert')).toContainText('amount must be a number');
   await expect(page.getByRole('heading', { name: 'Safe saved row' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('125');
+
+  const finiteButOverflowing = `1${'0'.repeat(199)}`;
+  await page.locator('#file-work').setInputFiles({
+    name: 'overflowing-hours.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(`date,client,project,description,hours,rate\n2026-08-02,Acme,Site,Overflowing calculation,${finiteButOverflowing},${finiteButOverflowing}`)
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Work CSV row 2: hours multiplied by rate must produce a finite amount');
+  await expect(page.getByRole('heading', { name: 'Safe saved row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('125');
+  expect(pageErrors).toEqual([]);
 
   await page.locator('#file-work').setInputFiles({
     name: 'recovered-work.csv', mimeType: 'text/csv',
@@ -135,6 +148,8 @@ test('@claim:hours-times-rate calculates a missing amount from hours and rate', 
 });
 
 test('@claim:review-matches keeps suggestions under user control', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('/demo');
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
   await page.getByRole('button', { name: 'Link invoice' }).first().click();
@@ -152,6 +167,37 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
+
+  const client = 'Extremely Long Client Organization Name';
+  const project = 'Quarterly Platform Migration';
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'reviewed-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(`date,client,project,description,status,amount\n2026-08-01,${client},${project},Original reviewed task,completed,100`)
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByText('1 work rows imported.')).toBeVisible();
+  await page.locator('#file-invoices').setInputFiles({
+    name: 'reviewed-invoice.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(`invoice date,invoice number,client,project\n2026-08-02,INV-OLD,${client},${project}`)
+  });
+  await page.getByRole('button', { name: 'Import invoices', exact: true }).click();
+  await page.getByRole('button', { name: 'Link invoice' }).click();
+  await expect(page.getByTestId('queue-total')).toContainText('0.00');
+
+  await page.locator('#file-work').setInputFiles({
+    name: 'replacement-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(`date,client,project,description,status,amount\n2026-08-01,${client},${project},New implementation task never reviewed,completed,500`)
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByText('1 work rows imported. 1 prior review decision was cleared because that work changed.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'New implementation task never reviewed' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('500');
+  await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'New implementation task never reviewed' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('500');
+  expect(pageErrors).toEqual([]);
 });
 
 test('@claim:invoice-replacement clears links to invoices missing from the replacement CSV', async ({ page }) => {
@@ -210,7 +256,8 @@ test('@claim:local-only sends no imported or demo review rows off-device', async
 });
 
 test('@claim:offline-reload works offline after the first visit', async ({ page, context }) => {
-  await page.goto(`http://pwa-offline-${Date.now()}.localhost:4173/demo`);
+  await page.goto(`http://pwa-offline-${Date.now()}.localhost:4173/`);
+  await expect.poll(() => page.evaluate(async () => Boolean(await navigator.serviceWorker.getRegistration()))).toBe(true);
   await page.evaluate(() => navigator.serviceWorker.ready);
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   const cachedShell = await page.evaluate(async () => {
@@ -219,6 +266,8 @@ test('@claim:offline-reload works offline after the first visit', async ({ page,
   });
   expect(cachedShell.some((path) => /\/assets\/index-.+\.js$/u.test(path))).toBe(true);
   expect(cachedShell.some((path) => /\/assets\/index-.+\.css$/u.test(path))).toBe(true);
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
   await context.setOffline(true);
   const cachedModule = await page.evaluate(async () => {
     const asset = performance.getEntriesByType('resource').map((entry) => entry.name).find((url) => /\/assets\/index-.+\.js$/u.test(url));
@@ -229,8 +278,8 @@ test('@claim:offline-reload works offline after the first visit', async ({ page,
   expect(cachedModule.ok).toBe(true);
   expect(cachedModule.length).toBeGreaterThan(1_000);
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Review work before you invoice' })).toBeVisible();
-  await expect(page.getByTestId('work-list')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find finished work you have not billed' })).toBeVisible();
+  await expect(page.getByTestId('workspace')).toBeVisible();
 });
 
 test('@claim:runtime-asset-cache stores a fetched same-origin asset for offline reuse', async ({ page }) => {
@@ -604,6 +653,9 @@ test('the 390px layout stays inside the viewport', async ({ page }) => {
 test('the 390px landing page tolerates 200% text sizing', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  const shortcut = await page.getByRole('link', { name: 'Or import your CSV files' }).boundingBox();
+  expect(shortcut?.width).toBeGreaterThanOrEqual(44);
+  expect(shortcut?.height).toBeGreaterThanOrEqual(44);
   await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);

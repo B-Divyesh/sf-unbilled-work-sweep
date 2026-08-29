@@ -73,7 +73,16 @@ export function mappingFields(kind: ImportKind): { key: string; label: string; r
 
 const truthy = (value: string) => /^(yes|true|1|billed|invoiced|paid)$/i.test(value.trim());
 const safe = (row: Record<string, string>, mapping: Mapping, key: string) => mapping[key] ? row[mapping[key]] ?? '' : '';
-const idFor = (values: string[], index: number) => `${values.join('|').toLowerCase().replace(/[^a-z0-9|]/g, '').slice(0, 50)}-${index}`;
+/**
+ * A review decision is keyed to an imported row, so its identity must never
+ * collapse two different rows. The former display-oriented, 50-character
+ * slug dropped the description for long client/project names. This encoding
+ * keeps every field and prefixes each value with its length, making the
+ * serialized sequence unambiguous without depending on a separator that can
+ * also occur in a CSV cell. The row index distinguishes otherwise identical
+ * duplicate rows in one import.
+ */
+const idFor = (kind: ImportKind, values: string[], index: number) => `${kind}:${values.map((value) => `${value.length}:${value}`).join('')}:${index}`;
 
 const readableList = (values: string[]): string => values.length < 2
   ? values[0] ?? ''
@@ -117,11 +126,14 @@ export function mapWork(csv: ParsedCsv, mapping: Mapping): WorkItem[] {
       const hours = hoursText.trim() ? numeric(hoursText) : null;
       const rate = rateText.trim() ? numeric(rateText) : null;
       if (hours === null || rate === null) issues.push('hours and rate must both be numbers when amount is blank');
-      else amount = hours * rate;
+      else {
+        amount = hours * rate;
+        if (!Number.isFinite(amount)) issues.push('hours multiplied by rate must produce a finite amount');
+      }
     }
     if (issues.length) failures.push({ row: index + 2, issues });
     return {
-      id: idFor([date, client, project, description], index), date, client, project, description,
+      id: idFor('work', [date, client, project, description, safe(row, mapping, 'status') || 'completed', amountText, hoursText, rateText, safe(row, mapping, 'billed')], index), date, client, project, description,
       status: safe(row, mapping, 'status') || 'completed', amount,
       billed: truthy(safe(row, mapping, 'billed'))
     };
@@ -143,7 +155,7 @@ export function mapInvoices(csv: ParsedCsv, mapping: Mapping): Invoice[] {
     if (missing.length) issues.push(`${readableList(missing)} ${missing.length === 1 ? 'is' : 'are'} required`);
     if (date.trim() && parseCalendarDate(date) === null) issues.push('invoice date must use YYYY-MM-DD or M/D/YYYY and be a real calendar date');
     if (issues.length) failures.push({ row: index + 2, issues });
-    return { id: idFor([date, number, client, project], index), date, number, client, project, status: safe(row, mapping, 'status') || 'issued' };
+    return { id: idFor('invoices', [date, number, client, project, safe(row, mapping, 'status') || 'issued'], index), date, number, client, project, status: safe(row, mapping, 'status') || 'issued' };
   });
   if (failures.length) invalidRows('Invoice', failures);
   return invoices;

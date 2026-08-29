@@ -67,7 +67,7 @@
     "claim": "Works offline after the first visit",
     "where": "landing facts, README",
     "test": "npm test -- --grep @claim:offline-reload",
-    "sandbox": "fresh browser context; load demo, wait for its service worker, go offline, reload, and assert the sample queue"
+    "sandbox": "fresh browser context; load the normal landing route, wait for its service worker, disable the HTTP cache and network, reload, and assert the landing workspace"
   },
   {
     "id": "runtime-asset-cache",

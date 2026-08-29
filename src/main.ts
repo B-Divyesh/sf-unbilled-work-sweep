@@ -209,6 +209,23 @@ async function persistAndRender(status: string): Promise<void> {
   await render();
 }
 
+/**
+ * A completed-work replacement is a new source of truth. Keep decisions only
+ * for rows whose complete identity is still present; discard stale review and
+ * checklist state before it can be attached to changed work.
+ */
+function reconcileWorkReplacement(work: WorkItem[]): number {
+  const workIds = new Set(work.map((item) => item.id));
+  let clearedReviews = 0;
+  state.decisions = Object.fromEntries(Object.entries(state.decisions).filter(([workId, decision]) => {
+    if (workIds.has(workId)) return true;
+    if (decision.kind === 'linked' || decision.kind === 'keep') clearedReviews += 1;
+    return false;
+  }));
+  state.checked = Object.fromEntries(Object.entries(state.checked).filter(([workId]) => workIds.has(workId)));
+  return clearedReviews;
+}
+
 function bindEvents(): void {
   document.querySelectorAll<HTMLAnchorElement>('a[data-route]').forEach((link) => link.addEventListener('click', (event) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || link.target) return;
@@ -230,8 +247,11 @@ function bindEvents(): void {
     if (fields.some((field) => field.required && !mapping[field.key])) { error = 'Choose a CSV column for every required field, then import again.'; void render(); return; }
     try {
       let clearedLinks = 0;
+      let clearedReviews = 0;
       if (pending.kind === 'work') {
-        state.work = mapWork(pending.csv, mapping);
+        const work = mapWork(pending.csv, mapping);
+        clearedReviews = reconcileWorkReplacement(work);
+        state.work = work;
       } else {
         const invoices = mapInvoices(pending.csv, mapping);
         const invoiceByIdentity = new Map(invoices.map((invoice) => [
@@ -250,8 +270,9 @@ function bindEvents(): void {
       const count = pending.csv.rows.length;
       const noun = pending.kind === 'work' ? 'work' : 'invoice';
       const cleared = clearedLinks ? ` ${clearedLinks} stale invoice ${clearedLinks === 1 ? 'link' : 'links'} cleared.` : '';
+      const discarded = clearedReviews ? ` ${clearedReviews} prior ${clearedReviews === 1 ? 'review decision was' : 'review decisions were'} cleared because that work changed.` : '';
       pending = null;
-      void persistAndRender(`${count} ${noun} rows imported.${cleared}`);
+      void persistAndRender(`${count} ${noun} rows imported.${cleared}${discarded}`);
     } catch (caught) {
       error = caught instanceof Error ? caught.message : 'The CSV rows could not be imported. Fix the file and try again.';
       message = '';
@@ -348,7 +369,7 @@ function registerServiceWorker(): void {
     waitingServiceWorker = null;
     document.querySelector<HTMLElement>('#update-notice')?.setAttribute('hidden', '');
   });
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').then((registration) => {
+  const register = () => navigator.serviceWorker.register('/sw.js').then((registration) => {
     const showWaitingUpdate = () => {
       const worker = registration.waiting;
       // A waiting worker is an update only when an older worker is already
@@ -376,8 +397,15 @@ function registerServiceWorker(): void {
         }
       });
     });
-  }).catch(() => { /* The app still works without installation support. */ }));
+  }).catch(() => { /* The app still works without installation support. */ });
+  if (document.readyState === 'complete') void register();
+  else window.addEventListener('load', () => void register(), { once: true });
 }
+
+// Register before asynchronous IndexedDB and license initialization. On a
+// normal first visit those operations can finish after the load event; adding
+// a new load listener then means it never fires and leaves the app offline.
+registerServiceWorker();
 
 window.addEventListener('popstate', async () => { state = await loadState(currentPath() === '/demo'); await render(true); });
 window.addEventListener('online', () => void render());
@@ -388,4 +416,3 @@ isDemo = currentPath() === '/demo' || new URLSearchParams(location.search).get('
 state = await loadState(isDemo);
 if (isDemo && state.work.length === 0) { state = sampleState(); await saveState(state, true); }
 await render();
-registerServiceWorker();
