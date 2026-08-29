@@ -8,12 +8,14 @@ for candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d`.
 
 ### Repairs
 
-- Replaced the import-card `h3` elements with styled text labels. The shared
-  CSV mapping panel is now an `h2`, and empty-state display text is no longer
-  inserted as an out-of-context heading. `/demo` now has the ordered outline
-  `h1 → h2 → h3`, including after a file is selected for mapping.
-- Removed the 34px demo-banner override. **Reset demo** and **Start for real**
-  now retain the product's 44px minimum target at the required 390px width.
+- Replaced the import-card `h3` elements with styled text labels, grouped the
+  importer under an `h2`, promoted the mapping panel to `h2`, and removed
+  out-of-context empty-state headings. `/demo` now has an ordered outline in
+  every workspace state.
+- Removed the 34px demo-banner override and the adjacent 40px review-button
+  override. **Reset demo** and **Start for real** now retain the product's
+  44px minimum target at 390px. Header, footer, notice, and checklist targets
+  also retain at least 44px hit areas.
 - Added a persistent **Linked matches** review strip. Every linked work row
   shows its invoice and a keyboard-operable **Unlink invoice** button. Unlinking
   deletes only that review decision, persists the change, restores the work to
@@ -29,8 +31,9 @@ for candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d`.
   `$5,840.00` queue return.
 - The route accessibility regression now fails on Axe `heading-order` and also
   walks every rendered heading level to reject skipped levels.
-- The 390×844 regression measures both persistent demo controls and requires
-  each width and height to be at least 44 CSS pixels.
+- A dedicated Axe regression verifies `/demo` heading order. The 390×844
+  regressions measure both persistent demo controls and require each width and
+  height to be at least 44 CSS pixels.
 
 ### Local verification evidence
 
@@ -38,7 +41,7 @@ for candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d`.
 - Claims: all 15 commands in `.factory/claims.json` passed individually from
   the clean install. An inventory check confirmed exactly one tagged test for
   each claim.
-- Complete browser/unit integration: `npm test` passed all **22 Chromium
+- Complete browser/unit integration: `npm test` passed all **23 Chromium
   tests**. This includes both CSV import paths, matching/link/unlink, checklist
   and workspace export/import, malformed-input recovery, real-data persistence,
   demo isolation, privacy requests, mocked license verification, PWA offline
@@ -46,49 +49,46 @@ for candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d`.
 - Type/lint: `npx tsc --noEmit` passed. No separate lint script is configured;
   the production build repeats the TypeScript check.
 - Production build: `npm run build` passed and emitted `dist/index.html`.
-  Initial JavaScript is 31,804 bytes (11.27 KB gzip) and CSS is 15,438 bytes
-  (4.19 KB gzip). The largest hero image remains 80,150 bytes.
+  Initial JavaScript is 31,936 bytes (11.29 KB gzip) and CSS is 15,784 bytes
+  (4.24 KB gzip). The largest hero image remains 80,150 bytes.
 - `npm audit --omit=dev` and `git diff --check` passed.
-- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173` passed in 547 ms with no
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173` passed in 610 ms with no
   console/page errors, the correct title and language, one h1, one main,
   labelled buttons, and no missing alt text. Evidence:
-  `/tmp/unbilled-repair4-verify.NUQmDc/verify.json`.
+  `/tmp/unbilled-repair4-final-local.KDoDWi/verify.json`.
 - Mobile Lighthouse JSON reports Performance 100, Accessibility 100, Best
-  Practices 100, and SEO 100; LCP 1.2 s, CLS 0, and TBT 80 ms. Lighthouse wrote
-  the complete report to `/tmp/unbilled-repair4-lighthouse.json` before its
+  Practices 100, and SEO 100; LCP 1.2 s, CLS 0, and TBT 70 ms. Lighthouse wrote
+  the complete report to `/tmp/unbilled-repair-4-lighthouse.json` before its
   known final headless-tab crash message.
-- Manual production-browser checks at 1440×1000 and 390×844 found no console
-  errors or horizontal overflow. The demo control heights are exactly 44px;
-  the heading levels are `1,2,3,3,3,3,2`; reduced-motion durations are
-  `0.00001s`; linking and keyboard-unlinking sent no off-origin request.
-  Screenshots: `/tmp/unbilled-repair4-desktop.png`,
-  `/tmp/unbilled-repair4-linked-desktop.png`,
-  `/tmp/unbilled-repair4-mobile.png`, and
-  `/tmp/unbilled-repair4-linked-mobile.png`.
+- Manual Chromium checks at 1440×1000 and 390×844 found no console errors or
+  horizontal overflow. Axe reported zero violations on all routes. The demo
+  controls measured 104×44px and 113.70×44px; reduced-motion durations were
+  `0.00001s`. Keyboard Enter linked a match and Space unlinked it after reload.
+  The flow made no off-origin request.
 
 ### Deployment and live identity
 
-- Repair commit `f4e4338d9292765c2b54ede1e932bed0fb206510` was pushed to
-  `origin/main`. The exact committed build was deployed with
+- Combined repair commit `4b273ce7f0fb64f09b3038b4205935d544f44629` was pushed
+  to `origin/main`. The exact committed build was deployed with
   `/opt/fleet/lib/deploy-static.sh unbilled-work-sweep ./dist`.
 - The helper reused production Azure Static Web App `sf-unbilled-work-sweep`
-  in Central US, uploaded the 353,524-byte app artifact, completed deployment
-  `0c6be826-d529-47c0-b721-2a650ca6cc4f`, and confirmed the custom domain was
+  in Central US, uploaded the 354,137-byte app artifact, completed deployment
+  `7f557e0c-4e85-468e-8e45-91d8979b0576`, and confirmed the custom domain was
   ready over TLS.
-- Live HTML references `index-BC8J-1M8.js` and `index-BsYUgCZm.css`. Local and
+- Live HTML references `index-BOeYgcCD.js` and `index-DZxUijIc.css`. Local and
   live SHA-256 hashes match exactly: JavaScript
-  `ac1e2a93c2a1da787e45d331e62bcbd6b73284845b2b65af08e79cdd8fd6a6cd`,
-  CSS `c7477b18217a2397e744096a6bdbbb062a6804fb5bab7bc93888ab45d143e465`,
+  `1c72153395afcf4e3cdd01b7440131f04d30ea1e5eb99bff6a89f412ece1f19d`,
+  CSS `34fe8076856ed5e71a601cafa974ef60df18d454a440af4b6d6177eb08d11738`,
   and service worker
-  `ddf485797614ae92ac904bf0bc42af37e69e57176058a6ae7cd47afeefca9032`.
-- Live `verify-url.sh` passed in 2,234 ms with no console/page errors and all
+  `951f86207cff3049acbbd330df28deb268a92f82e131748d32995a058468e917`.
+- Live `verify-url.sh` passed in 784 ms with no console/page errors and all
   title, language, landmark, label, and image-alt checks. Evidence:
-  `/tmp/unbilled-repair4-live-verify.O41mJg/verify.json`.
+  `/tmp/unbilled-repair4-live.0aPA6O/verify.json`.
 - A fresh live 390×844 Chromium context reported zero Axe violations and the
-  ordered heading levels `1,2,3,3,3,3,2`. Both demo actions measured 44px
-  tall. Link reduced the queue to `$3,640.00`; after reload, keyboard unlink
-  restored the row and `$5,840.00`. The flow made no off-origin requests and
-  produced no console/page errors.
+  ordered heading levels `1,2,2,3,3,3,3,2`. The demo actions measured 104×44px
+  and 113.70×44px. Link reduced the queue to `$3,640.00`; after reload,
+  keyboard unlink restored the row and `$5,840.00`. The flow made no
+  off-origin requests and produced no console/page errors.
 - The live service worker was activated and controlling the page with no
   waiting worker; the update notice remained hidden. An explicit offline
   reload retained the `$5,840.00` demo queue with no errors. The 390px page had
@@ -99,6 +99,12 @@ for candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d`.
   30 seconds, `sw.js` is `no-cache`, and hashed assets are immutable for one
   year. HTTPS includes HSTS, `nosniff`, strict-origin referrer policy,
   permissions policy, and the restrictive configured CSP.
+- Live mobile Lighthouse reports Performance 100, Accessibility 100, Best
+  Practices 100, and SEO 100; LCP 0.9 s, CLS 0, and TBT 20 ms. Report:
+  `/tmp/unbilled-repair4-live-lighthouse.json`.
+- The Sociobot verification boundary returned 30 successful invalid-license
+  checks and 10 rate-limited responses for a 40-request burst. Every 429 had
+  `Retry-After: 4`.
 
 ### Known limits
 
