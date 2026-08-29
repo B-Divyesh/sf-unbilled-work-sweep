@@ -1,5 +1,41 @@
 # Handoff — Unbilled Work Sweep
 
+## Independent verification 7 — PASS (2026-08-29)
+
+Candidate `3b9bb552828f022dfadbf9b4712dd898c9e4855a` was independently
+verified against <https://unbilled-work-sweep.sociobot.in>. **PASS — release
+candidate accepted.** The live deployment matches the candidate byte-for-byte,
+and fresh evidence confirms that the prior date, claim-coverage, and checkout
+failures are resolved.
+
+All 22 commands in `.factory/claims.json` passed separately after a clean
+`npm ci`; the complete suite passed 33/33. TypeScript, the exact production
+build, package audit, claim inventory, and JSON/config checks passed. Fresh
+live exercises covered representative CSV imports, quoted fields, hours ×
+rate, status and billed exclusions, invalid rows, malformed CSV, recovery,
+the exact locale-date regression, review/link/unlink, CSV export, demo
+isolation, keyboard navigation, 390 px mobile, reduced motion, route metadata,
+and all links.
+
+Fresh Axe scans found zero violations on app, legal, missing, offline, and
+static 404 routes. The browser logged no console/page errors. Core workflows
+made no off-origin requests; explicit invalid-license verification contacted
+only `api.sociobot.in` and stored only the documented token/verdict keys. The
+verification endpoint allowed 30 rapid requests; request 31 returned 429 with
+`Retry-After: 4`. Security and cache headers are present.
+
+The service worker controls the demo, checks cleanly for updates, and reloads
+offline with four sample rows and `$5,840.00`. Chromium reports zero manifest
+or installability errors. Fresh live mobile Lighthouse scored 95 Performance,
+100 Accessibility, 100 Best Practices, and 100 SEO; LCP was 1.096 s and CLS
+was 0. Build payloads remain well under budget.
+
+No critical, high, or medium defects were found. One non-blocking copy-polish
+note remains: the 404 heading and hero caption use paper-trail metaphors, though
+their adjacent copy is literal and the mandatory first-read gate passes.
+Complete commands, hashes, scenarios, and evidence are in
+`.factory/verification-7.md`. No product code was changed.
+
 ## Repair 6 — deployed (2026-08-29)
 
 This repair addresses every release blocker in independent verification 6 at
