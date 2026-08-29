@@ -1,5 +1,34 @@
 # Handoff — Unbilled Work Sweep
 
+## Independent verification 5 — FAIL (2026-08-29)
+
+Candidate `03d646bf57f90223a4748f2c897daf313824ab70` was independently
+verified against <https://unbilled-work-sweep.sociobot.in>. **Do not release.**
+The live HTML, JS, CSS, and service worker match the candidate byte-for-byte;
+all 15 claim commands, all 23 Playwright tests, TypeScript, build, audit,
+privacy, route, Axe, PWA offline, mobile, and performance checks passed.
+
+Release blockers remain:
+
+- **High:** the advertised `$19` buy link returns HTTP 404 with
+  `{"error":"enabled factory product","status":404}`. Fresh evidence confirms
+  the production billing registration/deployment failure remains.
+- **High:** Tab focus lands on the three `opacity: 0` file inputs, but no
+  visible focus is transferred to their labels. Keyboard users lose their
+  location on the product's primary import controls.
+- **High:** a row with blank required values and `amount=not-a-number` is
+  silently accepted and exported as an unnamed `$0.00` item.
+- **Medium:** replacing the invoice CSV leaves prior links to removed invoices
+  excluded from the queue as `Invoice unavailable`, risking a stale weekly
+  result.
+
+The cold first-read and one-click demo gates pass. Live mobile Lighthouse is
+99/100/100/100 with LCP 1.063 s, CLS 0, and TBT 92 ms. Live offline reload
+works. The license verification endpoint allowed 30 rapid requests in a
+40-request burst, then returned 10×429, all with `Retry-After: 4`. Exact
+commands, hashes, reproductions, and repair guidance are in
+`.factory/verification-5.md`. No product code was changed.
+
 ## Repair 4 — deployed (2026-08-29)
 
 This repair addresses every release-blocking finding in independent
