@@ -1,6 +1,6 @@
 # Handoff — Unbilled Work Sweep
 
-## Repair 4 — ready for production deployment (2026-08-29)
+## Repair 4 — deployed (2026-08-29)
 
 This repair addresses every release-blocking finding in independent
 verification 4 at report commit `fde281071da6ee68ca63acee5db89568efca7420`
@@ -68,10 +68,37 @@ for candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d`.
 
 ### Deployment and live identity
 
-Pending the committed production build. Deploy with
-`/opt/fleet/lib/deploy-static.sh unbilled-work-sweep ./dist`, then confirm the
-custom domain's assets, response headers, accessibility, recovery flow, and
-offline service-worker shell match this repair.
+- Repair commit `f4e4338d9292765c2b54ede1e932bed0fb206510` was pushed to
+  `origin/main`. The exact committed build was deployed with
+  `/opt/fleet/lib/deploy-static.sh unbilled-work-sweep ./dist`.
+- The helper reused production Azure Static Web App `sf-unbilled-work-sweep`
+  in Central US, uploaded the 353,524-byte app artifact, completed deployment
+  `0c6be826-d529-47c0-b721-2a650ca6cc4f`, and confirmed the custom domain was
+  ready over TLS.
+- Live HTML references `index-BC8J-1M8.js` and `index-BsYUgCZm.css`. Local and
+  live SHA-256 hashes match exactly: JavaScript
+  `ac1e2a93c2a1da787e45d331e62bcbd6b73284845b2b65af08e79cdd8fd6a6cd`,
+  CSS `c7477b18217a2397e744096a6bdbbb062a6804fb5bab7bc93888ab45d143e465`,
+  and service worker
+  `ddf485797614ae92ac904bf0bc42af37e69e57176058a6ae7cd47afeefca9032`.
+- Live `verify-url.sh` passed in 2,234 ms with no console/page errors and all
+  title, language, landmark, label, and image-alt checks. Evidence:
+  `/tmp/unbilled-repair4-live-verify.O41mJg/verify.json`.
+- A fresh live 390×844 Chromium context reported zero Axe violations and the
+  ordered heading levels `1,2,3,3,3,3,2`. Both demo actions measured 44px
+  tall. Link reduced the queue to `$3,640.00`; after reload, keyboard unlink
+  restored the row and `$5,840.00`. The flow made no off-origin requests and
+  produced no console/page errors.
+- The live service worker was activated and controlling the page with no
+  waiting worker; the update notice remained hidden. An explicit offline
+  reload retained the `$5,840.00` demo queue with no errors. The 390px page had
+  zero horizontal overflow. Screenshot:
+  `/tmp/unbilled-repair4-live-mobile.png`.
+- `/`, `/demo`, `/privacy`, `/terms`, the manifest, service worker, robots,
+  sitemap, and the SPA not-found route all returned 200. HTML revalidates after
+  30 seconds, `sw.js` is `no-cache`, and hashed assets are immutable for one
+  year. HTTPS includes HSTS, `nosniff`, strict-origin referrer policy,
+  permissions policy, and the restrictive configured CSP.
 
 ### Known limits
 
