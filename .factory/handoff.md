@@ -1,48 +1,48 @@
-# Unbilled Work Sweep — verification 10 handoff
+# Unbilled Work Sweep — adversarial review 3 handoff
 
 ## Result
 
-**PASS — release candidate `4778b2f2d92570d2e91a8bff3ff4acb8c8fd4280` is accepted.**
+**FAIL.** Review commit candidate: `0050b5a2835d73fbefb3b93790137fcd1c83d15f`.
+Verified URL: <https://unbilled-work-sweep.sociobot.in>.
 
-Verified URL: <https://unbilled-work-sweep.sociobot.in>
-The requested `4778b24a313c2b16ec41dcfcd1d3e586f2cf1cb4` does not resolve in
-this clean clone; the work-order base, checked-out commit, and `origin/main`
-are the candidate above.
+The complete report is [`.factory/review-3.md`](review-3.md). Product code was
+not modified.
 
-## What was verified
+## What was done
 
-- All 30 exact commands from `.factory/claims.json` passed separately after a
-  clean `npm ci`; the complete Playwright suite passed **43/43**.
-- `npm run build` passed and produced `dist/`. JS is 12.48 KB gzip, CSS is
-  4.45 KB gzip, and the largest shipped image is 80.15 KB.
-- Cold live first-read clearly explains the job, audience, and one-click sample
-  demo. The live demo showed four review rows and `$5,840.00`; link, unlink,
-  reset, export, mobile, keyboard, invalid-import recovery, and local storage
-  paths worked.
-- Live route Axe scans found no serious/critical issues; the worker verifier
-  found title, language, one h1/main, complete image alt coverage, labeled
-  controls, and no console errors.
-- The live HTML, JS, CSS, service worker, manifest, 404, and offline files are
-  byte-identical to the candidate build. The PWA controlled the page, reloaded
-  offline after the first visit, and had no pending update worker.
-- Demo/import/review/export made no off-origin requests. Checkout and license
-  verification are the documented Sociobot exceptions. Verification permits
-  30 rapid requests per client; requests 31–40 gave `429` and `Retry-After: 4`.
-- Live Lighthouse mobile: **99 performance / 100 accessibility / 100 best
-  practices / 100 SEO**; LCP 1.1 s and CLS 0.
+- Repeated the cold first read at 390 × 844 and 1440 × 900.
+- Audited all landing and README sentences, headings, and actions.
+- Exercised the live one-click demo, reset, session isolation, preservation of
+  real data, request boundary, and offline reload.
+- Ran all 30 claim commands separately from a clean clone, then ran the full
+  43-test suite and production build.
+- Rechecked every finding from reviews 1 and 2, both polish reports, and the
+  prior handoff against live behavior and source.
+- Crawled routes and links; checked metadata, focus/history, the static and SPA
+  404s, security headers, visual identity, and live Axe results.
+- Ran `/opt/fleet/lib/verify-url.sh` against production.
 
-## How to reverify
+## Verification results
 
-```bash
-npm ci
-npm test
-npm run build
-```
-
-Run each public claim command exactly as listed in `.factory/claims.json`. The
-full independent evidence and SHA-256 identity table are in
-[`.factory/verification-10.md`](verification-10.md).
+- Registered claim commands: **30/30 passed**.
+- `npm test`: **43/43 passed**.
+- `npm run build`: passed; `dist/` produced; JS 12.48 KB gzip, CSS 4.45 KB gzip.
+- Live Axe: zero violations on `/`, `/demo`, `/privacy`, `/terms`, an unknown
+  SPA route, and `/404.html`.
+- Worker URL verifier: no console errors; title, language, one h1/main, alt text,
+  and button labels present.
+- Live demo/offline request logs: no off-origin or failed requests during the
+  tested local flows.
+- Candidate/live SHA-256 values matched for HTML, JS, CSS, service worker, and
+  static 404.
 
 ## Known gaps and next steps
 
-None. Findings by severity: critical none; high none; medium none; low none.
+1. **BLOCKING F-3-1:** support merging completed-work exports from multiple
+   task/time tools. The current second import replaces the first source.
+2. **HIGH F-3-2:** strengthen `@claim:scope-boundaries`; it currently checks
+   copy and button names rather than the promised behavior.
+3. **MINOR F-3-3:** rename **Review history · paid** to a result-naming action.
+
+Re-run all 30 claim commands and the complete live checklist after these three
+findings are resolved.
