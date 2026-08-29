@@ -1,5 +1,103 @@
 # Handoff — Unbilled Work Sweep
 
+## Repair 6 — deployed (2026-08-29)
+
+This repair addresses every release blocker in independent verification 6 at
+report commit `dc40e94037b99adf92aa573813b24d441c82d647` for candidate
+`aed37ad2bb0d14b048fa23a31fcf697a59e84f9a`.
+
+### Repairs
+
+- Reproduced the exact controller case before editing: work dated `10/1/2026`
+  and invoice `INV-OLD` dated `9/1/2026` rendered **Possible invoice:
+  INV-OLD**. The matcher was comparing raw strings.
+- Added an explicit calendar parser for `YYYY-MM-DD` and `M/D/YYYY`. It builds
+  UTC calendar days and verifies the parsed year, month, and day, so impossible
+  dates such as `2/30/2026` fail. Work and invoice imports now reject malformed
+  dates before storage, workspace backup validation applies the same rule, and
+  matching compares parsed calendar values.
+- Added the accepted formats beside the mapping controls and in the README.
+  The updated `invoice-date-guard` claim covers the exact locale-formatted
+  false positive, a valid invoice across a year boundary, malformed dates,
+  impossible dates, both import types, and preservation of prior data.
+- Added a registered claim and focused browser regression for every promise
+  named by verification 6: `header-mapping`, `missing-status`,
+  `demo-session-removal`, `clear-workspace`, and `license-storage`.
+  `.factory/claims.json` now contains 22 claims with exactly one matching
+  `@claim:<id>` test and command each.
+- A final live Axe check caught muted row text during the first 220 ms of the
+  entrance animation. Row motion now uses only the specified 8 px transform,
+  without fading text. A paused-mid-animation contrast regression prevents a
+  recurrence while retaining the product's paper-settle interaction.
+
+### Complete verification
+
+- Clean install: `npm ci` installed 24 packages with 0 vulnerabilities.
+- Claims: all 22 commands from `.factory/claims.json` passed separately against
+  the final build. Logs: `/tmp/unbilled-repair6-final-claims.RJhyax/`.
+- Unit/integration/browser: `npm test` passed 33/33 Chromium 1.58.2 tests.
+  Coverage includes the exact date failure, accepted cross-year dates, invalid
+  date recovery, all claims, desktop, 390×844 mobile, keyboard, route Axe,
+  mid-animation contrast, 200% text, privacy requests, IndexedDB/demo
+  isolation, service-worker offline reload/update state, and CSV/JSON recovery.
+- Type/lint: `npx tsc --noEmit` passed. This vanilla TypeScript repository has
+  no separate lint command; the production build repeats the type check.
+- Production: `npm run build` passed with `dist/index.html` at its root. Initial
+  JS is 34,588 bytes (12.23 KB gzip), CSS is 15,795 bytes (4.24 KB gzip), and
+  the largest hero asset is 80,150 bytes. `npm audit --omit=dev`, deployment
+  JSON parsing, the claim inventory audit, and `git diff --check` passed.
+- Local URL verification returned HTTP 200 in 589 ms with no console/page
+  errors, `lang=en`, one h1, one main, labelled buttons, and complete alt text.
+  Evidence: `/tmp/unbilled-repair6-url.3kZJHo/`.
+- Local mobile Lighthouse was 100/100/100/100 with LCP 1.144 s, CLS 0, and TBT
+  42 ms. Final live mobile Lighthouse is Performance 98, Accessibility 100,
+  Best Practices 100, SEO 100, LCP 1.096 s, CLS 0, and TBT 157 ms. Report:
+  `/tmp/unbilled-repair6-final-live-lighthouse.json`.
+
+### Final browser, privacy, PWA, and policy evidence
+
+- A fresh final live desktop import showed **No invoice match found** for the
+  verifier's October work/September invoice and suggested `INV-NEW` dated
+  `1/1/2026` for work dated `12/31/2025`. The first Tab target was the skip
+  link. The flow made no off-origin request and logged no console/page error.
+- Final live Axe found zero serious/critical violations on `/`, `/demo`,
+  `/privacy`, `/terms`, and the in-app missing route. At 390×844 there was zero
+  horizontal overflow; all 25 effective controls measured at least 44×44 px.
+  Evidence: `/tmp/unbilled-repair6-final-live-browser.json` and
+  `/tmp/unbilled-repair6-final-live-mobile.png`.
+- A fresh service-worker-controlled live `/demo` had no waiting worker or false
+  update notice. Offline reload retained its h1, four sample rows, and
+  `$5,840.00`. The active cache was
+  `unbilled-work-sweep-b7bba19b90e4`.
+- Final live URL verification returned HTTP 200 in 961 ms with no errors and
+  the required title, language, main, h1, labels, and alt text. Evidence:
+  `/tmp/unbilled-repair6-final-live.6IE2jf/`.
+- Root, demo, privacy, terms, robots, sitemap, manifest, service worker, and the
+  SPA missing route return successfully. HTML revalidates after 30 seconds;
+  hashed assets are immutable for one year; `sw.js` is `no-cache`. HTTPS sends
+  HSTS, `nosniff`, strict-origin referrer policy, permissions policy, and the
+  restrictive CSP. The checkout contract returns HTTP 303 to a live
+  Dodo-hosted session; no purchase was attempted. This static PWA has no
+  product backend, package consumer, or sign-in identity surface to verify.
+
+### Deployment and identity
+
+- Repair commits `c8a5ac9` and `73d66e2` were pushed to `origin/main`.
+- The final `dist/` was deployed with
+  `/opt/fleet/lib/deploy-static.sh unbilled-work-sweep ./dist`. Azure Static Web
+  Apps deployment `9c7efae6-0f53-4b7f-9910-4a986b05d02e` succeeded; the custom
+  domain is ready over managed TLS.
+- Local/live SHA-256 values match exactly: `index.html`
+  `c0f12973e6b97ff064c9227f16d43be40df0484bb64a9c909073e9df6fb3b241`,
+  JavaScript `eb41174577773edf3cf9d1022375922de94213e210440b3dd964b746731aafe7`,
+  CSS `6fd7e427250eeda4ed29d039498fa07e065dd654486c3024415326da55d79620`,
+  service worker
+  `04a65d86da86c589231f9165f61a737cf72c74fe432c7af7b1904eb5d699439b`,
+  and manifest
+  `9df996f16ae40f2778418d3c3dd3cb0bb0c82a0079993ca3224bf59e337f4e1d`.
+
+No known release-blocking gaps remain from verification 6.
+
 ## Independent verification 6 — FAIL (2026-08-29)
 
 Candidate `aed37ad2bb0d14b048fa23a31fcf697a59e84f9a` was independently
