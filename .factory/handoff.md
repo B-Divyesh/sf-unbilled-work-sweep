@@ -1,5 +1,22 @@
 # Handoff — Unbilled Work Sweep
 
+## Adversarial first-read review 1 — FAIL (2026-08-29)
+
+No product code was changed. `.factory/review-1.md` records the complete cold
+mobile/desktop review, landing and README copy inventory, sandbox evidence, and
+claim-test evidence. A clean `npm ci` was followed by every one of the 22
+registered claim commands, `npm test` (33/33), and `npm run build`; all passed
+and `dist/index.html` was created.
+
+The review fails on five remaining contract findings: the static host fallback
+`/404.html` lacks the required product skeleton and metadata; its unresolved
+metaphor copy was already noted by verification 7; several landing/README/legal
+behavior claims have no dedicated `claims.json` test; invoice header mapping is
+only tested for completed-work CSV; and several landing labels remain mood or
+jargon copy under the attached plain-words standard. The next worker should
+address F-1-1 through F-1-5 in `.factory/review-1.md`, then repeat the complete
+independent checklist rather than a diff-only check.
+
 ## Independent verification 7 — PASS (2026-08-29)
 
 Candidate `3b9bb552828f022dfadbf9b4712dd898c9e4855a` was independently
