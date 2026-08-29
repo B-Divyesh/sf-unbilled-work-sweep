@@ -1,6 +1,6 @@
 # Handoff — Unbilled Work Sweep
 
-## Repair 5 — ready to deploy (2026-08-29)
+## Repair 5 — deployed (2026-08-29)
 
 This repair addresses every product finding in independent verification 5 at
 report commit `51f45fd7f039431ca4b01f597c7747130bbbe17c` for candidate
@@ -68,8 +68,36 @@ report commit `51f45fd7f039431ca4b01f597c7747130bbbe17c` for candidate
 
 ### Deployment and known gaps
 
-Deployment and live asset/response-policy checks are recorded below after the
-repair is pushed. No product gaps are known from local verification.
+- Repair commit `5d45d1ae4d75bb331564b22e52026e87998c1555` was pushed to
+  `origin/main` and deployed with
+  `/opt/fleet/lib/deploy-static.sh unbilled-work-sweep ./dist`.
+- The helper reused Azure Static Web App `sf-unbilled-work-sweep` in Central US,
+  uploaded the 363,014-byte artifact, and completed deployment
+  `16ddee46-6aa8-4f4b-aa41-43d27389e3ee`. The custom domain is ready over TLS.
+- Live and local files match byte-for-byte: `index.html`
+  `abb150235bb003c3276ea4dbaaf7ce89c17dc8a02dd0294d63a859a87ff75451`,
+  JS `d8ef16631f7564ab450b962a1ea771f7ee6192094e67ed8ed2cea86372e7c318`,
+  CSS `b8186638ad1dc00d14915184501c952fe133c1fc69fb554748e29623ee5e39cc`,
+  and service worker
+  `b670648c55f1cedc1aea7961fd20bc2ab32db79f74f3bb567a83633a054f8cb8`.
+- Live `verify-url.sh` returned HTTP 200 in 785 ms with no console/page errors
+  and all baseline structure checks passing. Evidence:
+  `/tmp/unbilled-repair5-live.kaydWa/verify.json` plus desktop/mobile captures.
+- A fresh live 390×844 Chromium check passed all three keyboard file-label
+  focus states, zero serious/critical Axe findings, zero horizontal overflow,
+  the exact invalid-row rejection with prior data retained, zero off-origin
+  requests, and zero console errors. A separate fresh context completed a real
+  offline `/demo` reload with the `$5,840.00` queue intact. The live stale-link
+  flow restored the total from `$3,640.00` to `$5,840.00` and removed the
+  linked section after an unrelated invoice replacement.
+- `/`, `/demo`, `/privacy`, `/terms`, the in-app missing route, manifest,
+  service worker, robots, and sitemap return successfully. Live HTML revalidates
+  after 30 seconds, hashed assets are immutable for one year, and `sw.js` is
+  `no-cache`. HSTS, `nosniff`, strict-origin referrer policy, permissions policy,
+  and the restrictive CSP are present.
+- Final checkout evidence is HTTP 303 from the Sociobot contract URL to a Dodo
+  Live session and HTTP 200 after following it. No purchase was attempted.
+  No known product gaps remain from verification 5.
 
 ## Independent verification 5 — FAIL (2026-08-29)
 
