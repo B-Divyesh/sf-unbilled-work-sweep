@@ -7,6 +7,13 @@
     "sandbox": "fresh browser context; upload two in-memory CSV fixtures and assert parsed rows, amount, and suggested invoice"
   },
   {
+    "id": "multi-source-import",
+    "claim": "Adds completed-work exports from multiple tools, labels each source, skips exact duplicate rows, and replaces only a confirmed source",
+    "where": "landing first screen, workspace source list, README",
+    "test": "npm test -- --grep @claim:multi-source-import",
+    "sandbox": "fresh browser context; add task-tool and time-tool fixtures, assert both labelled rows and their combined total, skip an exact duplicate, then confirm replacing one source while the other remains"
+  },
+  {
     "id": "demo-sample-ready",
     "claim": "One click opens an isolated sample with six work rows, two suggestions, four review rows, a $5,840 total, a working reset, and an actionable row in the first phone viewport",
     "where": "landing first screen, demo first screen",
@@ -50,10 +57,10 @@
   },
   {
     "id": "work-replacement",
-    "claim": "Replacing completed work keeps review decisions for unchanged rows and returns changed rows to the unbilled-work list",
+    "claim": "Replacing one completed-work source keeps its unchanged review decisions and returns its changed rows to the unbilled-work list",
     "where": "README, work replacement status",
     "test": "npm test -- --grep @claim:work-replacement",
-    "sandbox": "fresh browser context; review two imported rows, replace the CSV with one identical row and one changed row, then assert the unchanged decision remains and the changed row returns for review"
+    "sandbox": "fresh browser context; review two rows from one source, confirm replacing only that source with one identical and one changed row, then assert the unchanged decision remains and the changed row returns for review"
   },
   {
     "id": "invoice-replacement",
@@ -200,7 +207,7 @@
     "claim": "The sweep reviews exported records; it does not send invoices, track time, calculate tax, or change source files",
     "where": "landing boundary section, README",
     "test": "npm test -- --grep @claim:scope-boundaries",
-    "sandbox": "fresh browser context; assert the stated review boundary and the absence of invoice, time, and tax actions"
+    "sandbox": "temporary source fixtures; hash the work file before and after import, match review, checklist export, and workspace export; assert no off-origin or send request and inspect every interactive action for invoice-sending, time-tracking, or tax behavior"
   },
   {
     "id": "art-disclosure",

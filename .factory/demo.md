@@ -1,7 +1,7 @@
 # Demo sandbox
 
-- URL: `https://unbilled-work-sweep.sociobot.in/demo` (local: `http://localhost:5173/demo`). `?demo=1` also enters the sandbox.
-- Sample: six work rows across four clients and two possible invoices. Four completed, not-yet-linked rows total $5,840. One completed row is already billed; one row is unfinished.
+- Primary URL: `https://unbilled-work-sweep.sociobot.in/?demo=1` (local: `http://localhost:5173/?demo=1`). `/demo` opens the same sandbox.
+- Sample: six work rows from `task-board-export.csv` and `time-tracker-export.csv`, across four clients and two possible invoices. Four completed, not-yet-linked rows total $5,840. One completed row is already billed; one row is unfinished.
 - First screen: at 390 × 844, the total, a real sample row, its suggested invoice, and its review actions are visible without scrolling.
 - Try: link Brightside or Morrow, unlink it from **Linked matches**, replace invoices to clear missing links, mark a checklist item, and export the CSV.
 - Reset: use **Reset demo** in the persistent banner.

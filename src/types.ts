@@ -1,5 +1,6 @@
 export type WorkItem = {
   id: string;
+  sourceId: string;
   date: string;
   client: string;
   project: string;
@@ -7,6 +8,12 @@ export type WorkItem = {
   status: string;
   amount: number;
   billed: boolean;
+};
+
+export type WorkSource = {
+  id: string;
+  name: string;
+  importedAt: string;
 };
 
 export type Invoice = {
@@ -22,6 +29,7 @@ export type Decision = { kind: 'linked'; invoiceId: string } | { kind: 'keep' };
 
 export type SweepState = {
   work: WorkItem[];
+  workSources: WorkSource[];
   invoices: Invoice[];
   decisions: Record<string, Decision>;
   checked: Record<string, boolean>;

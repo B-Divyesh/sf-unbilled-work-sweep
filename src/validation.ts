@@ -1,4 +1,4 @@
-import type { Decision, Invoice, SweepState, WorkItem } from './types';
+import type { Decision, Invoice, SweepState, WorkItem, WorkSource } from './types';
 import { parseCalendarDate } from './dates';
 
 const currencies = new Set(['USD', 'GBP', 'EUR', 'CAD', 'AUD']);
@@ -21,12 +21,18 @@ function nonEmptyStringFields(value: Record<string, unknown>, keys: string[]): b
 }
 
 function isWorkItem(value: unknown): value is WorkItem {
-  if (!record(value) || !exactKeys(value, ['id', 'date', 'client', 'project', 'description', 'status', 'amount', 'billed'])) return false;
-  return stringFields(value, ['id', 'date', 'client', 'project', 'description', 'status'])
+  if (!record(value) || !exactKeys(value, ['id', 'sourceId', 'date', 'client', 'project', 'description', 'status', 'amount', 'billed'])) return false;
+  return stringFields(value, ['id', 'sourceId', 'date', 'client', 'project', 'description', 'status'])
+    && nonEmptyStringFields(value, ['sourceId'])
     && nonEmptyStringFields(value, ['date', 'client', 'project', 'description'])
     && parseCalendarDate(value.date as string) !== null
     && typeof value.amount === 'number' && Number.isFinite(value.amount)
     && typeof value.billed === 'boolean';
+}
+
+function isWorkSource(value: unknown): value is WorkSource {
+  if (!record(value) || !exactKeys(value, ['id', 'name', 'importedAt'])) return false;
+  return stringFields(value, ['id', 'name', 'importedAt']) && nonEmptyStringFields(value, ['id', 'name', 'importedAt']);
 }
 
 function isInvoice(value: unknown): value is Invoice {
@@ -55,11 +61,44 @@ function isCheckedRecord(value: unknown): value is Record<string, boolean> {
  * saved workspace is loaded before the recovery controls are rendered.
  */
 export function isSweepState(value: unknown): value is SweepState {
-  if (!record(value) || !exactKeys(value, ['work', 'invoices', 'decisions', 'checked', 'currency', 'importedAt'])) return false;
-  return Array.isArray(value.work) && value.work.every(isWorkItem)
+  if (!record(value) || !exactKeys(value, ['work', 'workSources', 'invoices', 'decisions', 'checked', 'currency', 'importedAt'])) return false;
+  if (!Array.isArray(value.work) || !value.work.every(isWorkItem)
+    || !Array.isArray(value.workSources) || !value.workSources.every(isWorkSource)) return false;
+  const sources = value.workSources as WorkSource[];
+  return value.work.every((work) => sources.some((source) => source.id === work.sourceId))
     && Array.isArray(value.invoices) && value.invoices.every(isInvoice)
     && isDecisionRecord(value.decisions)
     && isCheckedRecord(value.checked)
     && typeof value.currency === 'string' && currencies.has(value.currency)
     && (typeof value.importedAt === 'string' || value.importedAt === null);
+}
+
+function isLegacyWorkItem(value: unknown): value is Omit<WorkItem, 'sourceId'> {
+  if (!record(value) || !exactKeys(value, ['id', 'date', 'client', 'project', 'description', 'status', 'amount', 'billed'])) return false;
+  return stringFields(value, ['id', 'date', 'client', 'project', 'description', 'status'])
+    && nonEmptyStringFields(value, ['date', 'client', 'project', 'description'])
+    && parseCalendarDate(value.date as string) !== null
+    && typeof value.amount === 'number' && Number.isFinite(value.amount)
+    && typeof value.billed === 'boolean';
+}
+
+/** Keep work saved by the pre-multi-source release instead of silently dropping it. */
+export function restoreSweepState(value: unknown): SweepState | null {
+  if (isSweepState(value)) return value;
+  if (!record(value) || !exactKeys(value, ['work', 'invoices', 'decisions', 'checked', 'currency', 'importedAt'])) return null;
+  if (!Array.isArray(value.work) || !value.work.every(isLegacyWorkItem)
+    || !Array.isArray(value.invoices) || !value.invoices.every(isInvoice)
+    || !isDecisionRecord(value.decisions) || !isCheckedRecord(value.checked)
+    || typeof value.currency !== 'string' || !currencies.has(value.currency)
+    || !(typeof value.importedAt === 'string' || value.importedAt === null)) return null;
+  const sourceId = 'earlier-completed-work';
+  return {
+    work: value.work.map((work) => ({ ...work, sourceId })),
+    workSources: value.work.length ? [{ id: sourceId, name: 'Earlier completed-work import', importedAt: value.importedAt ?? new Date().toISOString() }] : [],
+    invoices: value.invoices,
+    decisions: value.decisions,
+    checked: value.checked,
+    currency: value.currency,
+    importedAt: value.importedAt
+  };
 }

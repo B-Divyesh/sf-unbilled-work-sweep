@@ -6,11 +6,12 @@ Unbilled Work Sweep keeps a weekly invoice review in your browser for freelancer
 
 Live site: <https://unbilled-work-sweep.sociobot.in>
 
-One-click demo: <https://unbilled-work-sweep.sociobot.in/demo>
+One-click demo: <https://unbilled-work-sweep.sociobot.in/?demo=1>
 
 ## What it does
 
-- Imports completed-work and invoice CSV exports.
+- Combines completed-work CSV exports from multiple task or time tools and labels each source.
+- Imports invoice CSV exports for comparison.
 - Suggests invoice matches using client and project names. A suggestion changes nothing until you review it, and every link can be reversed.
 - Lists completed rows that are not marked billed or linked to an invoice.
 - Exports the current unbilled-work list as a CSV checklist.
@@ -32,6 +33,9 @@ Completed-work CSV:
 - If amount is missing, the importer multiplies hours by rate.
 - If status is missing, the row is treated as completed.
 
+Use **Add another export** for each task or time tool. Exact duplicate rows are skipped. Each row keeps its source filename.
+Use **Replace this source** to update one export after confirming; other sources stay in the review.
+
 Invoice CSV:
 
 - Required: invoice date, invoice number, client
@@ -39,7 +43,7 @@ Invoice CSV:
 
 Suggestions ignore capitalization, punctuation, and spacing when comparing client and project names. A different project is not suggested. Invoice dates before work dates are not suggested. Every match remains a review choice, and linked matches can be returned to the list.
 Replacing the invoice CSV clears links to invoices that are no longer present, returning that work to the list.
-Replacing completed-work CSV keeps review decisions only for unchanged rows. Changed work returns to the list for review.
+Replacing one completed-work source keeps review decisions only for unchanged rows. Changed work returns to the list for review.
 
 ## Run locally
 
@@ -50,7 +54,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Use <http://localhost:5173/demo> for the isolated sample.
+Open <http://localhost:5173>. Use <http://localhost:5173/?demo=1> for the isolated sample.
 
 ## Test and build
 

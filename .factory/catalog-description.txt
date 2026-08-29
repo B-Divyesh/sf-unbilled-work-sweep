@@ -1,1 +1,1 @@
-Find completed freelance work that still needs an invoice.
+Combine task, time, and invoice exports to find completed work that still needs billing.

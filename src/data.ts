@@ -1,16 +1,20 @@
 import type { Invoice, SweepState, WorkItem } from './types';
 import { parseCalendarDate } from './dates';
 
-export const emptyState = (): SweepState => ({ work: [], invoices: [], decisions: {}, checked: {}, currency: 'USD', importedAt: null });
+export const emptyState = (): SweepState => ({ work: [], workSources: [], invoices: [], decisions: {}, checked: {}, currency: 'USD', importedAt: null });
 
 export const sampleState = (): SweepState => ({
   work: [
-    { id: 'w-bright-1', date: '2026-08-18', client: 'Brightside Studio', project: 'Website launch', description: 'Final responsive page build', status: 'completed', amount: 2200, billed: false },
-    { id: 'w-north-1', date: '2026-08-20', client: 'North Star Foods', project: 'Brand sprint', description: 'Packaging direction and review', status: 'done', amount: 1800, billed: false },
-    { id: 'w-morrow-1', date: '2026-08-21', client: 'Morrow & Co', project: 'August retainer', description: 'Campaign reporting and edits', status: 'closed', amount: 1200, billed: false },
-    { id: 'w-north-2', date: '2026-08-23', client: 'North Star Foods', project: 'Customer research', description: 'Interview synthesis', status: 'completed', amount: 640, billed: false },
-    { id: 'w-atelier-1', date: '2026-08-19', client: 'Atelier Lune', project: 'Autumn catalogue', description: 'Layout production', status: 'completed', amount: 950, billed: true },
-    { id: 'w-morrow-2', date: '2026-08-27', client: 'Morrow & Co', project: 'September retainer', description: 'Planning call', status: 'in progress', amount: 300, billed: false }
+    { id: 'w-bright-1', sourceId: 'sample-tasks', date: '2026-08-18', client: 'Brightside Studio', project: 'Website launch', description: 'Final responsive page build', status: 'completed', amount: 2200, billed: false },
+    { id: 'w-north-1', sourceId: 'sample-tasks', date: '2026-08-20', client: 'North Star Foods', project: 'Brand sprint', description: 'Packaging direction and review', status: 'done', amount: 1800, billed: false },
+    { id: 'w-morrow-1', sourceId: 'sample-time', date: '2026-08-21', client: 'Morrow & Co', project: 'August retainer', description: 'Campaign reporting and edits', status: 'closed', amount: 1200, billed: false },
+    { id: 'w-north-2', sourceId: 'sample-time', date: '2026-08-23', client: 'North Star Foods', project: 'Customer research', description: 'Interview synthesis', status: 'completed', amount: 640, billed: false },
+    { id: 'w-atelier-1', sourceId: 'sample-tasks', date: '2026-08-19', client: 'Atelier Lune', project: 'Autumn catalogue', description: 'Layout production', status: 'completed', amount: 950, billed: true },
+    { id: 'w-morrow-2', sourceId: 'sample-time', date: '2026-08-27', client: 'Morrow & Co', project: 'September retainer', description: 'Planning call', status: 'in progress', amount: 300, billed: false }
+  ],
+  workSources: [
+    { id: 'sample-tasks', name: 'task-board-export.csv', importedAt: '2026-08-28T09:00:00.000Z' },
+    { id: 'sample-time', name: 'time-tracker-export.csv', importedAt: '2026-08-28T09:00:00.000Z' }
   ],
   invoices: [
     { id: 'i-bright-1', date: '2026-08-25', number: 'INV-1042', client: 'Brightside Studios', project: 'Website launch', status: 'sent' },

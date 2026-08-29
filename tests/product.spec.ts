@@ -1,14 +1,17 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { sampleState } from '../src/data';
-import { isSweepState } from '../src/validation';
+import { isSweepState, restoreSweepState } from '../src/validation';
 
 test('@claim:demo-sample-ready opens a complete actionable sample in one click', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('link', { name: 'Try it with sample data' }).click();
-  await expect(page).toHaveURL(/\/demo$/u);
+  await expect(page).toHaveURL(/\/?\?demo=1$/u);
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
   await expect(page.locator('.import-card').first()).toContainText('6 rows imported');
   await expect(page.locator('.match-box')).toHaveCount(2);
@@ -53,6 +56,53 @@ test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) 
   await expect(page.getByText('1 invoice rows imported.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('250');
   await expect(page.getByText('Possible invoice:').first()).toBeVisible();
+});
+
+test('@claim:multi-source-import combines labelled exports, skips duplicates, and replaces one source after confirmation', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'task-tool.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Launch,Task tool row,completed,100')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Task tool row' })).toBeVisible();
+  await expect(page.getByText('task-tool.csv', { exact: true })).toBeVisible();
+
+  await page.locator('#file-work').setInputFiles({
+    name: 'time-tool.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-02,Beta,Retainer,Time tool row,completed,200')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Task tool row' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Time tool row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('300');
+  await expect(page.getByText('2 sources · 2 rows imported')).toBeVisible();
+  await expect(page.locator('.source-list')).toContainText('task-tool.csv');
+  await expect(page.locator('.source-list')).toContainText('time-tool.csv');
+  await expect(page.getByRole('heading', { name: 'Task tool row' }).locator('xpath=ancestor::li')).toContainText('Source: task-tool.csv');
+
+  await page.locator('#file-work').setInputFiles({
+    name: 'duplicate-export.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Launch,Task tool row,completed,100')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByText('0 work rows imported. 1 exact duplicate row was skipped.')).toBeVisible();
+  await expect(page.locator('.work-slip')).toHaveCount(2);
+
+  const taskSource = page.locator('.source-list li').filter({ hasText: 'task-tool.csv' });
+  await taskSource.locator('input[type="file"]').setInputFiles({
+    name: 'task-tool-week-2.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-03,Acme,Launch,Updated task row,completed,150')
+  });
+  let confirmation = '';
+  page.once('dialog', async (dialog) => { confirmation = dialog.message(); await dialog.accept(); });
+  await page.getByRole('button', { name: 'Replace source' }).click();
+  await expect.poll(() => confirmation).toContain('Only rows from this source will change.');
+  await expect(page.getByRole('heading', { name: 'Task tool row' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Updated task row' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Time tool row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('350');
+  await expect(page.locator('.source-list')).toContainText('task-tool-week-2.csv');
 });
 
 test('@claim:header-mapping imports manually mapped columns with unrelated header names', async ({ page }) => {
@@ -151,7 +201,8 @@ test('@claim:validated-import rejects blank required cells and non-numeric amoun
   await page.getByRole('button', { name: 'Import work', exact: true }).click();
   await expect(page.getByText('1 work rows imported.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Recovered row' })).toBeVisible();
-  await expect(page.getByTestId('queue-total')).toContainText('250');
+  await expect(page.getByRole('heading', { name: 'Safe saved row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('375');
 
   await page.locator('#file-invoices').setInputFiles({
     name: 'valid-invoices.csv', mimeType: 'text/csv',
@@ -218,12 +269,13 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   await page.getByRole('button', { name: 'Link invoice' }).click();
   await expect(page.getByTestId('queue-total')).toContainText('0.00');
 
-  await page.locator('#file-work').setInputFiles({
+  await page.locator('[data-replace-source]').first().setInputFiles({
     name: 'replacement-work.csv', mimeType: 'text/csv',
     buffer: Buffer.from(`date,client,project,description,status,amount\n2026-08-01,${client},${project},New implementation task never reviewed,completed,500`)
   });
-  await page.getByRole('button', { name: 'Import work', exact: true }).click();
-  await expect(page.getByText('1 work rows imported. 1 prior review decision was cleared because that work changed.')).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Replace source' }).click();
+  await expect(page.getByText(/1 work rows imported.*1 prior review decision was cleared because that work changed/u)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'New implementation task never reviewed' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('500');
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
@@ -274,12 +326,13 @@ test('@claim:work-replacement keeps unchanged reviews and clears changed work re
   await page.getByRole('heading', { name: 'Unchanged reviewed work' }).locator('..').getByRole('button', { name: 'Link invoice' }).click();
   await page.getByRole('heading', { name: 'Work that will change' }).locator('..').getByRole('button', { name: 'Keep unbilled' }).click();
 
-  await page.locator('#file-work').setInputFiles({
+  await page.locator('[data-replace-source]').first().setInputFiles({
     name: 'replacement-work.csv', mimeType: 'text/csv',
-    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Launch,Unchanged reviewed work,completed,100\n2026-08-02,Beta,Site,Changed work returns,completed,250')
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-02,Beta,Site,Changed work returns,completed,250\n2026-08-01,Acme,Launch,Unchanged reviewed work,completed,100')
   });
-  await page.getByRole('button', { name: 'Import work', exact: true }).click();
-  await expect(page.getByText('2 work rows imported. 1 prior review decision was cleared because that work changed.')).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Replace source' }).click();
+  await expect(page.getByText(/2 work rows imported.*1 prior review decision was cleared because that work changed/u)).toBeVisible();
   await expect(page.locator('.linked-matches')).toContainText('Unchanged reviewed work');
   await expect(page.getByRole('heading', { name: 'Changed work returns' })).toBeVisible();
   await expect(page.getByText('Work that will change')).toHaveCount(0);
@@ -546,7 +599,7 @@ test('@claim:license-storage stores only the license token and latest verificati
 
 test('@claim:free-core keeps imports, review, and checklist export available without a license', async ({ page }) => {
   await page.goto('/demo');
-  await expect(page.getByRole('button', { name: 'Review history · paid' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View review history options' })).toBeVisible();
   await page.getByRole('button', { name: 'Keep unbilled' }).first().click();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export checklist CSV' }).click();
@@ -561,10 +614,45 @@ test('@claim:billing-boundary uses one Sociobot checkout link with no embedded p
 });
 
 test('@claim:scope-boundaries keeps the sweep as a review and export tool', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'It does not send invoices' })).toBeVisible();
-  await expect(page.getByText('It does not track time, calculate tax, or change your source files.')).toBeVisible();
-  await expect(page.getByRole('button', { name: /send invoice|calculate tax|track time/i })).toHaveCount(0);
+  const fixtureDirectory = await mkdtemp(join(tmpdir(), 'unbilled-scope-'));
+  const workPath = join(fixtureDirectory, 'source-work.csv');
+  const invoicePath = join(fixtureDirectory, 'source-invoices.csv');
+  const digest = async (path: string) => createHash('sha256').update(await readFile(path)).digest('hex');
+  await writeFile(workPath, 'date,client,project,description,status,amount\n2026-08-01,Acme,Site,Source file stays unchanged,completed,125');
+  await writeFile(invoicePath, 'invoice date,invoice number,client,project\n2026-08-02,INV-SCOPE,Acme,Site');
+  const before = await digest(workPath);
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+
+  try {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'It does not send invoices' })).toBeVisible();
+    await expect(page.getByText('It does not track time, calculate tax, or change your source files.')).toBeVisible();
+    await page.locator('#file-work').setInputFiles(workPath);
+    await page.getByRole('button', { name: 'Import work', exact: true }).click();
+    await page.locator('#file-invoices').setInputFiles(invoicePath);
+    await page.getByRole('button', { name: 'Import invoices' }).click();
+    await page.getByRole('button', { name: 'Keep unbilled' }).click();
+    const checklistDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export checklist CSV' }).click();
+    await checklistDownload;
+    const workspaceDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export workspace' }).click();
+    await workspaceDownload;
+
+    expect(await digest(workPath)).toBe(before);
+    expect(requests.filter((url) => new URL(url).origin !== 'http://127.0.0.1:4173')).toEqual([]);
+    expect(requests.filter((url) => /send|invoice\/create|tax|time-entry/iu.test(new URL(url).pathname))).toEqual([]);
+    const interactiveNames = await page.locator('button, a, label[for], input, select').evaluateAll((elements) => elements.map((element) => [
+      element.textContent,
+      element.getAttribute('aria-label'),
+      element.getAttribute('name'),
+      element.getAttribute('value')
+    ].filter(Boolean).join(' ')));
+    expect(interactiveNames.filter((name) => /send invoice|calculate tax|track time|start timer|log time/iu.test(name))).toEqual([]);
+  } finally {
+    await rm(fixtureDirectory, { recursive: true, force: true });
+  }
 });
 
 test('@claim:art-disclosure discloses generated product artwork in the footer', async ({ page }) => {
@@ -612,6 +700,12 @@ test('workspace backup validation rejects malformed nested records and fields', 
     { ...valid, importedAt: 42 }
   ];
   malformed.forEach((backup) => expect(isSweepState(backup)).toBe(false));
+
+  const { workSources: _sources, ...legacy } = sampleState();
+  const legacyWork = legacy.work.map(({ sourceId: _sourceId, ...work }) => work);
+  const restored = restoreSweepState({ ...legacy, work: legacyWork });
+  expect(restored?.workSources).toEqual([{ id: 'earlier-completed-work', name: 'Earlier completed-work import', importedAt: '2026-08-28T09:00:00.000Z' }]);
+  expect(restored?.work.every((work) => work.sourceId === 'earlier-completed-work')).toBe(true);
 });
 
 test('the update action targets only the waiting worker', async () => {
@@ -740,6 +834,11 @@ test('query demo entry and invalid CSV error state work', async ({ page }) => {
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
   expect(await page.evaluate(() => sessionStorage.getItem('demo:unbilled-work-sweep'))).not.toBeNull();
+  await page.getByRole('button', { name: 'Link invoice' }).first().click();
+  await expect(page.getByTestId('queue-total')).toContainText('3,640');
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  await expect(page.getByTestId('queue-total')).toContainText('5,840');
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.includes('unbilled')))).toEqual([]);
   await page.getByRole('button', { name: 'Start for real' }).click();
   await page.locator('#file-work').setInputFiles({ name: 'broken.csv', mimeType: 'text/csv', buffer: Buffer.from('only-one-header\nvalue') });
   await expect(page.getByRole('alert')).toContainText('header row and at least one data row');

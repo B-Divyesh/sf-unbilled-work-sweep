@@ -79,8 +79,9 @@ const safe = (row: Record<string, string>, mapping: Mapping, key: string) => map
  * slug dropped the description for long client/project names. This encoding
  * keeps every field and prefixes each value with its length, making the
  * serialized sequence unambiguous without depending on a separator that can
- * also occur in a CSV cell. The row index distinguishes otherwise identical
- * duplicate rows in one import.
+ * also occur in a CSV cell. Completed-work IDs use their source plus the full
+ * row identity, so unchanged rows keep their review state even if an updated
+ * export changes row order. Exact duplicate work rows are removed on import.
  */
 const idFor = (kind: ImportKind, values: string[], index: number) => `${kind}:${values.map((value) => `${value.length}:${value}`).join('')}:${index}`;
 
@@ -100,7 +101,7 @@ function invalidRows(kind: 'Work' | 'Invoice', failures: { row: number; issues: 
   throw new Error(`${kind} CSV ${details}. Fix ${failures.length === 1 ? 'that row' : 'those rows'} and import again.`);
 }
 
-export function mapWork(csv: ParsedCsv, mapping: Mapping): WorkItem[] {
+export function mapWork(csv: ParsedCsv, mapping: Mapping, sourceId = 'completed-work'): WorkItem[] {
   const failures: { row: number; issues: string[] }[] = [];
   const work = csv.rows.map((row, index) => {
     const date = safe(row, mapping, 'date');
@@ -133,13 +134,17 @@ export function mapWork(csv: ParsedCsv, mapping: Mapping): WorkItem[] {
     }
     if (issues.length) failures.push({ row: index + 2, issues });
     return {
-      id: idFor('work', [date, client, project, description, safe(row, mapping, 'status') || 'completed', amountText, hoursText, rateText, safe(row, mapping, 'billed')], index), date, client, project, description,
+      id: idFor('work', [sourceId, date, client, project, description, safe(row, mapping, 'status') || 'completed', amountText, hoursText, rateText, safe(row, mapping, 'billed')], 0), sourceId, date, client, project, description,
       status: safe(row, mapping, 'status') || 'completed', amount,
       billed: truthy(safe(row, mapping, 'billed'))
     };
   });
   if (failures.length) invalidRows('Work', failures);
   return work;
+}
+
+export function workFingerprint(work: WorkItem): string {
+  return JSON.stringify([work.date, work.client, work.project, work.description, work.status, work.amount, work.billed]);
 }
 
 export function mapInvoices(csv: ParsedCsv, mapping: Mapping): Invoice[] {

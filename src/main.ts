@@ -1,9 +1,9 @@
 import './styles.css';
-import { mapInvoices, mappingFields, mapWork, parseCsv, suggestedMapping, toCsv } from './csv';
+import { mapInvoices, mappingFields, mapWork, parseCsv, suggestedMapping, toCsv, workFingerprint } from './csv';
 import { emptyState, queueFor, sampleState, suggestions } from './data';
 import { loadState, resetDemo, saveState } from './storage';
 import type { ImportKind, Mapping, ParsedCsv, SweepState, WorkItem } from './types';
-import { isSweepState } from './validation';
+import { restoreSweepState } from './validation';
 
 const PRODUCT = 'unbilled-work-sweep';
 const LICENSE_KEY = `sb_license:${PRODUCT}`;
@@ -15,7 +15,7 @@ const app: HTMLDivElement = root;
 
 let state: SweepState = emptyState();
 let isDemo = false;
-let pending: { kind: ImportKind; csv: ParsedCsv; mapping: Mapping } | null = null;
+let pending: { kind: ImportKind; csv: ParsedCsv; mapping: Mapping; replaceSourceId?: string } | null = null;
 let message = '';
 let error = '';
 let undoState: SweepState | null = null;
@@ -56,13 +56,13 @@ function homePage(): string {
   return `${header()}<main id="main">
     <section class="hero">
       <div class="hero-copy"><p class="eyebrow">Completed work to review before invoicing</p><h1 tabindex="-1">Find finished work you have not billed</h1><p class="lede">For freelancers and tiny agencies with work spread across task, time, and invoice tools.</p>
-        <div class="hero-actions"><a class="button primary" href="/demo" data-route>Try it with sample data</a><span>See a filled review in one click.</span></div>
+        <div class="hero-actions"><a class="button primary" href="/?demo=1" data-route>Try it with sample data</a><span>See a filled review in one click.</span></div>
         <a class="secondary-link" href="#sweep">Or import your CSV files</a>
         <ul class="plain-facts" aria-label="Product facts"><li>Files stay in this browser.</li><li>Works offline after your first visit.</li><li>Imports and checklist exports are free. Review history costs $19 once.</li></ul>
       </div>
       <figure class="hero-art"><picture><source media="(max-width: 700px)" srcset="/assets/paperwork-garden-720.webp"><img src="/assets/paperwork-garden-1200.webp" width="1200" height="800" alt="Paper invoices form a moonlit landscape where coral envelopes flow toward a filing box." fetchpriority="high" decoding="async"></picture><figcaption>Review completed work that may still need an invoice.</figcaption></figure>
     </section>
-    <section id="sweep" class="app-section" aria-labelledby="sweep-title"><div class="section-intro"><p class="eyebrow">Your local workspace</p><h2 id="sweep-title">Import work and invoice CSV files</h2><p>Add completed-work and invoice CSV files. You choose whether a suggested match counts as billed.</p></div>${notice()}${workspace()}</section>
+    <section id="sweep" class="app-section" aria-labelledby="sweep-title"><div class="section-intro"><p class="eyebrow">Your local workspace</p><h2 id="sweep-title">Import work and invoice CSV files</h2><p>Add one completed-work export from each tool. You choose whether a suggested invoice match counts as billed.</p></div>${notice()}${workspace()}</section>
     <section id="how" class="how-section" aria-labelledby="how-title"><p class="eyebrow">Three steps</p><h2 id="how-title">How the review works</h2><ol><li><span>1</span><div><h3>Import exports</h3><p>Map the columns from your task, time, and invoice CSV files.</p></div></li><li><span>2</span><div><h3>Review matches</h3><p>Link an invoice or keep the completed work in your unbilled-work list.</p></div></li><li><span>3</span><div><h3>Export your checklist</h3><p>Download the reviewed list as a CSV for your invoicing session.</p></div></li></ol></section>
     <section class="limits-section" aria-labelledby="limits-title"><div><p class="eyebrow">What this tool does not do</p><h2 id="limits-title">It does not send invoices</h2></div><p>It does not track time, calculate tax, or change your source files. It only helps you review exported records.</p></section>
     ${paidSection()}
@@ -75,21 +75,32 @@ function paidSection(): string {
 }
 
 function importCard(kind: ImportKind): string {
-  const name = kind === 'work' ? 'Completed work' : 'Invoices';
   const count = kind === 'work' ? state.work.length : state.invoices.length;
-  return `<div class="import-card ${count ? 'has-data' : ''}" data-drop-kind="${kind}"><div><span class="file-number">${kind === 'work' ? '01' : '02'}</span><p class="import-title">${name} CSV</p><p>${count ? `${count} rows imported` : kind === 'work' ? 'Tasks or time entries with client and project names.' : 'Issued or draft invoices with client and project names.'}</p></div><input class="visually-hidden-file" id="file-${kind}" data-file-kind="${kind}" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-${kind}">${count ? `Replace ${name.toLowerCase()}` : `Choose ${name.toLowerCase()} CSV`}</label></div>`;
+  if (kind === 'work') {
+    const sources = state.workSources.map((source, index) => {
+      const sourceCount = state.work.filter((work) => work.sourceId === source.id).length;
+      const inputId = `replace-work-source-${index}`;
+      return `<li><span><strong>${escapeHtml(source.name)}</strong><small>${sourceCount} ${sourceCount === 1 ? 'row' : 'rows'}</small></span><input class="visually-hidden-file" id="${inputId}" data-file-kind="work" data-replace-source="${escapeHtml(source.id)}" type="file" accept=".csv,text/csv"><label class="source-replace" for="${inputId}">Replace this source<span class="sr-only">: ${escapeHtml(source.name)}</span></label></li>`;
+    }).join('');
+    return `<div class="import-card work-import-card ${count ? 'has-data' : ''}" data-drop-kind="work"><div class="import-card-copy"><span class="file-number">01</span><p class="import-title">Completed work CSVs</p><p>${count ? `${state.workSources.length} ${state.workSources.length === 1 ? 'source' : 'sources'} · ${count} rows imported` : 'Add one export from each task or time tool.'}</p>${sources ? `<ul class="source-list" aria-label="Completed-work sources">${sources}</ul>` : ''}</div><input class="visually-hidden-file" id="file-work" data-file-kind="work" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-work">${count ? 'Add another export' : 'Choose completed work CSV'}</label></div>`;
+  }
+  return `<div class="import-card ${count ? 'has-data' : ''}" data-drop-kind="invoices"><div><span class="file-number">02</span><p class="import-title">Invoices CSV</p><p>${count ? `${count} rows imported` : 'Issued or draft invoices with client and project names.'}</p></div><input class="visually-hidden-file" id="file-invoices" data-file-kind="invoices" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-invoices">${count ? 'Replace invoices' : 'Choose invoices CSV'}</label></div>`;
 }
 
 function mappingPanel(): string {
   if (!pending) return '';
-  return `<section class="mapping-panel" aria-labelledby="mapping-title"><div><p class="eyebrow">Column check</p><h2 id="mapping-title">Map ${pending.kind === 'work' ? 'completed work' : 'invoice'} columns</h2><p>${escapeHtml(pending.csv.filename)} · ${pending.csv.rows.length} rows. Required fields are marked. Dates must use YYYY-MM-DD or M/D/YYYY.</p></div><form id="mapping-form"><div class="mapping-grid">${mappingFields(pending.kind).map((field) => `<label>${field.label}${field.required ? ' *' : ''}<select name="${field.key}" ${field.required ? 'required' : ''}><option value="">Not included</option>${pending?.csv.headers.map((header) => `<option value="${escapeHtml(header)}" ${pending?.mapping[field.key] === header ? 'selected' : ''}>${escapeHtml(header)}</option>`).join('')}</select></label>`).join('')}</div><div class="form-actions"><button type="button" class="button ghost" data-action="cancel-mapping">Cancel</button><button class="button primary" type="submit">Import ${pending.kind === 'work' ? 'work' : 'invoices'}</button></div></form></section>`;
+  const replacing = pending.kind === 'work' && pending.replaceSourceId;
+  const source = replacing ? state.workSources.find((item) => item.id === pending?.replaceSourceId) : undefined;
+  const replacementNote = source ? ` This will replace only ${escapeHtml(source.name)} after you confirm.` : '';
+  return `<section class="mapping-panel" aria-labelledby="mapping-title"><div><p class="eyebrow">Column check</p><h2 id="mapping-title">Map ${pending.kind === 'work' ? 'completed work' : 'invoice'} columns</h2><p>${escapeHtml(pending.csv.filename)} · ${pending.csv.rows.length} rows. Required fields are marked. Dates must use YYYY-MM-DD or M/D/YYYY.${replacementNote}</p></div><form id="mapping-form"><div class="mapping-grid">${mappingFields(pending.kind).map((field) => `<label>${field.label}${field.required ? ' *' : ''}<select name="${field.key}" ${field.required ? 'required' : ''}><option value="">Not included</option>${pending?.csv.headers.map((header) => `<option value="${escapeHtml(header)}" ${pending?.mapping[field.key] === header ? 'selected' : ''}>${escapeHtml(header)}</option>`).join('')}</select></label>`).join('')}</div><div class="form-actions"><button type="button" class="button ghost" data-action="cancel-mapping">Cancel</button><button class="button primary" type="submit">${source ? 'Replace source' : `Import ${pending.kind === 'work' ? 'work' : 'invoices'}`}</button></div></form></section>`;
 }
 
 function workRow(work: WorkItem): string {
   const top = suggestions(work, state.invoices)[0];
   const decision = state.decisions[work.id];
+  const source = state.workSources.find((item) => item.id === work.sourceId)?.name ?? 'Earlier import';
   const suggestion = top && !decision ? `<div class="match-box"><p><strong>Possible invoice:</strong> ${escapeHtml(top.invoice.number)} · ${escapeHtml(top.invoice.client)} / ${escapeHtml(top.invoice.project || 'No project')}</p><div><button data-link-work="${escapeHtml(work.id)}" data-invoice="${escapeHtml(top.invoice.id)}">Link invoice</button><button class="text-button" data-keep-work="${escapeHtml(work.id)}">Keep unbilled</button></div></div>` : decision?.kind === 'keep' ? `<p class="reviewed">Reviewed · kept in queue</p>` : `<p class="no-match">No invoice match found</p>`;
-  return `<li class="work-slip"><label class="check-control"><input type="checkbox" data-check-work="${escapeHtml(work.id)}" ${state.checked[work.id] ? 'checked' : ''}><span class="sr-only">Mark ${escapeHtml(work.description)} ready to invoice</span></label><div class="work-main"><div class="work-meta"><span>${escapeHtml(work.date || 'No date')}</span><span>${escapeHtml(work.client)}</span><span>${escapeHtml(work.project)}</span></div><h3>${escapeHtml(work.description)}</h3>${suggestion}</div><strong class="amount">${formatMoney(work.amount)}</strong></li>`;
+  return `<li class="work-slip"><label class="check-control"><input type="checkbox" data-check-work="${escapeHtml(work.id)}" ${state.checked[work.id] ? 'checked' : ''}><span class="sr-only">Mark ${escapeHtml(work.description)} ready to invoice</span></label><div class="work-main"><div class="work-meta"><span>${escapeHtml(work.date || 'No date')}</span><span>${escapeHtml(work.client)}</span><span>${escapeHtml(work.project)}</span><span>Source: ${escapeHtml(source)}</span></div><h3>${escapeHtml(work.description)}</h3>${suggestion}</div><strong class="amount">${formatMoney(work.amount)}</strong></li>`;
 }
 
 function linkedMatches(): string {
@@ -114,7 +125,7 @@ function workspace(): string {
   const workList = queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><p class="empty-title">No completed work needs review</p><p>Import more work, or unlink a match to bring it back.</p></div>`;
   const queueSection = hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Unbilled-work list</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
       ${isDemo ? `${workList}${toolbar}` : `${toolbar}${workList}`}
-      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save review total' : 'Review history · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your unbilled-work list will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label></div>`;
+      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save review total' : 'View review history options'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your unbilled-work list will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label></div>`;
   return `<div class="workspace${isDemo ? ' demo-workspace' : ''}" data-testid="workspace">${isDemo && hasData ? `${queueSection}${importSection}` : `${importSection}${queueSection}`}</div>`;
 }
 
@@ -178,7 +189,7 @@ async function render(focus = false): Promise<void> {
 async function navigate(path: string): Promise<void> {
   history.pushState({}, '', path);
   pending = null; message = ''; error = '';
-  isDemo = currentPath() === '/demo';
+  isDemo = currentPath() === '/demo' || new URLSearchParams(location.search).get('demo') === '1';
   state = await loadState(isDemo);
   if (isDemo && state.work.length === 0) { state = sampleState(); await saveState(state, true); }
   await render(true);
@@ -193,11 +204,14 @@ function download(name: string, content: string, type: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-async function receiveCsv(file: File, kind: ImportKind): Promise<void> {
+async function receiveCsv(file: File, kind: ImportKind, replaceSourceId?: string): Promise<void> {
   try {
     if (file.size > 10 * 1024 * 1024) throw new Error('The CSV is larger than 10 MB. Split it into smaller exports and try again.');
     const csv = parseCsv(await file.text(), file.name);
-    pending = { kind, csv, mapping: suggestedMapping(kind, csv.headers) };
+    const matchingSource = kind === 'work' && !replaceSourceId
+      ? state.workSources.find((source) => source.name.trim().toLowerCase() === file.name.trim().toLowerCase())
+      : undefined;
+    pending = { kind, csv, mapping: suggestedMapping(kind, csv.headers), replaceSourceId: replaceSourceId ?? matchingSource?.id };
     error = ''; message = '';
   } catch (caught) { error = caught instanceof Error ? caught.message : 'The CSV could not be read. Check the file and try again.'; }
   await render();
@@ -212,9 +226,8 @@ async function persistAndRender(status: string): Promise<void> {
 }
 
 /**
- * A completed-work replacement is a new source of truth. Keep decisions only
- * for rows whose complete identity is still present; discard stale review and
- * checklist state before it can be attached to changed work.
+ * A source replacement changes only that source. Keep decisions for rows whose
+ * complete identity is still present; discard stale review and checklist state.
  */
 function reconcileWorkReplacement(work: WorkItem[]): number {
   const workIds = new Set(work.map((item) => item.id));
@@ -231,10 +244,10 @@ function reconcileWorkReplacement(work: WorkItem[]): number {
 function bindEvents(): void {
   document.querySelectorAll<HTMLAnchorElement>('a[data-route]').forEach((link) => link.addEventListener('click', (event) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || link.target) return;
-    event.preventDefault(); void navigate(new URL(link.href).pathname);
+    event.preventDefault(); const url = new URL(link.href); void navigate(`${url.pathname}${url.search}${url.hash}`);
   }));
   document.querySelectorAll<HTMLInputElement>('[data-file-kind]').forEach((input) => input.addEventListener('change', () => {
-    const file = input.files?.[0]; if (file) void receiveCsv(file, input.dataset.fileKind as ImportKind);
+    const file = input.files?.[0]; if (file) void receiveCsv(file, input.dataset.fileKind as ImportKind, input.dataset.replaceSource);
   }));
   document.querySelectorAll<HTMLElement>('[data-drop-kind]').forEach((zone) => {
     zone.addEventListener('dragover', (event) => { event.preventDefault(); zone.classList.add('dragging'); });
@@ -250,10 +263,32 @@ function bindEvents(): void {
     try {
       let clearedLinks = 0;
       let clearedReviews = 0;
+      let duplicates = 0;
+      let workSourceAction = '';
       if (pending.kind === 'work') {
-        const work = mapWork(pending.csv, mapping);
-        clearedReviews = reconcileWorkReplacement(work);
-        state.work = work;
+        const replacing = pending.replaceSourceId ? state.workSources.find((source) => source.id === pending?.replaceSourceId) : undefined;
+        if (replacing && !confirm(`Replace ${replacing.name}? Only rows from this source will change.`)) return;
+        const sourceId = replacing?.id ?? `source-${crypto.randomUUID()}`;
+        const otherWork = replacing ? state.work.filter((work) => work.sourceId !== sourceId) : state.work;
+        const seen = new Set(otherWork.map(workFingerprint));
+        const mapped = mapWork(pending.csv, mapping, sourceId);
+        const work = mapped.filter((item) => {
+          const fingerprint = workFingerprint(item);
+          if (seen.has(fingerprint)) { duplicates += 1; return false; }
+          seen.add(fingerprint); return true;
+        });
+        const combined = [...otherWork, ...work];
+        clearedReviews = reconcileWorkReplacement(combined);
+        state.work = combined;
+        if (replacing) {
+          state.workSources = work.length
+            ? state.workSources.map((source) => source.id === sourceId ? { ...source, name: pending?.csv.filename ?? source.name, importedAt: new Date().toISOString() } : source)
+            : state.workSources.filter((source) => source.id !== sourceId);
+          workSourceAction = ` Replaced source ${replacing.name}.`;
+        } else if (work.length) {
+          state.workSources.push({ id: sourceId, name: pending.csv.filename, importedAt: new Date().toISOString() });
+          workSourceAction = ` Added source ${pending.csv.filename}.`;
+        }
       } else {
         const invoices = mapInvoices(pending.csv, mapping);
         const invoiceByIdentity = new Map(invoices.map((invoice) => [
@@ -269,12 +304,13 @@ function bindEvents(): void {
         }
         state.invoices = invoices;
       }
-      const count = pending.csv.rows.length;
+      const count = pending.kind === 'work' ? pending.csv.rows.length - duplicates : pending.csv.rows.length;
       const noun = pending.kind === 'work' ? 'work' : 'invoice';
       const cleared = clearedLinks ? ` ${clearedLinks} stale invoice ${clearedLinks === 1 ? 'link' : 'links'} cleared.` : '';
       const discarded = clearedReviews ? ` ${clearedReviews} prior ${clearedReviews === 1 ? 'review decision was' : 'review decisions were'} cleared because that work changed.` : '';
+      const duplicateNotice = duplicates ? ` ${duplicates} exact duplicate ${duplicates === 1 ? 'row was' : 'rows were'} skipped.` : '';
       pending = null;
-      void persistAndRender(`${count} ${noun} rows imported.${cleared}${discarded}`);
+      void persistAndRender(`${count} ${noun} rows imported.${workSourceAction}${duplicateNotice}${cleared}${discarded}`);
     } catch (caught) {
       error = caught instanceof Error ? caught.message : 'The CSV rows could not be imported. Fix the file and try again.';
       message = '';
@@ -292,8 +328,9 @@ function bindEvents(): void {
     const file = (event.currentTarget as HTMLInputElement).files?.[0]; if (!file) return;
     try {
       const value: unknown = JSON.parse(await file.text());
-      if (!isSweepState(value)) throw new Error('Invalid workspace backup');
-      const imported = structuredClone(value);
+      const restored = restoreSweepState(value);
+      if (!restored) throw new Error('Invalid workspace backup');
+      const imported = structuredClone(restored);
       imported.importedAt = new Date().toISOString();
       // Commit first. A bad file or a failed write must leave the rendered and
       // persisted workspace alone so its recovery controls remain reachable.

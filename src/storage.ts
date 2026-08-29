@@ -1,6 +1,6 @@
 import { emptyState } from './data';
 import type { SweepState } from './types';
-import { isSweepState } from './validation';
+import { restoreSweepState } from './validation';
 
 const DB_NAME = 'unbilled-work-sweep';
 const DEMO_KEY = 'demo:unbilled-work-sweep';
@@ -20,7 +20,7 @@ export async function loadState(demo: boolean): Promise<SweepState> {
     if (!saved) return emptyState();
     try {
       const value: unknown = JSON.parse(saved);
-      return isSweepState(value) ? value : emptyState();
+      return restoreSweepState(value) ?? emptyState();
     } catch { return emptyState(); }
   }
   try {
@@ -29,7 +29,7 @@ export async function loadState(demo: boolean): Promise<SweepState> {
       const request = database.transaction('workspace').objectStore('workspace').get('current');
       request.onsuccess = () => {
         const value: unknown = request.result;
-        resolve(isSweepState(value) ? value : emptyState());
+        resolve(restoreSweepState(value) ?? emptyState());
       };
       request.onerror = () => reject(request.error);
     });
@@ -37,7 +37,7 @@ export async function loadState(demo: boolean): Promise<SweepState> {
 }
 
 export async function saveState(state: SweepState, demo: boolean): Promise<void> {
-  if (!isSweepState(state)) throw new Error('Refusing to save an invalid workspace.');
+  if (!restoreSweepState(state)) throw new Error('Refusing to save an invalid workspace.');
   if (demo) { sessionStorage.setItem(DEMO_KEY, JSON.stringify(state)); return; }
   const database = await db();
   await new Promise<void>((resolve, reject) => {
