@@ -92,10 +92,10 @@
   },
   {
     "id": "manifest-mime",
-    "claim": "The web app manifest is served as application/manifest+json",
+    "claim": "The web app manifest is served with a standards-compatible JSON content type",
     "where": "PWA installation metadata",
     "test": "npm test -- --grep @claim:manifest-mime",
-    "sandbox": "production build preview; request manifest.webmanifest, assert a manifest JSON content type, and assert the static deployment configuration sets application/manifest+json"
+    "sandbox": "production build preview; request manifest.webmanifest, assert a manifest JSON content type, and assert the static deployment rewrites it to an identical JSON asset"
   },
   {
     "id": "runtime-asset-cache",

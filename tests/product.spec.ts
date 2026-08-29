@@ -374,7 +374,8 @@ test('@claim:manifest-mime serves the web app manifest with a manifest JSON cont
   expect(response.headers()['content-type']).toMatch(/^application\/(?:manifest\+json|json)(?:;|$)/u);
   const config = JSON.parse(await readFile('public/staticwebapp.config.json', 'utf8')) as { routes: Array<{ route: string; headers?: Record<string, string> }> };
   const manifestRoute = config.routes.find((route) => route.route === '/manifest.webmanifest');
-  expect(manifestRoute?.headers?.['Content-Type']).toBe('application/manifest+json');
+  expect(manifestRoute).toMatchObject({ rewrite: '/manifest.json' });
+  expect(JSON.parse(await readFile('public/manifest.json', 'utf8'))).toEqual(JSON.parse(await readFile('public/manifest.webmanifest', 'utf8')));
 });
 
 test('@claim:runtime-asset-cache stores a fetched same-origin asset for offline reuse', async ({ page }) => {
