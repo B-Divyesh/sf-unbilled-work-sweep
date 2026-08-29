@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audit date: 2026-08-28. Counts treat hyphenated terms and prices as one word. UI labels without a sentence ending are included where they carry meaning.
+Audit date: 2026-08-29. Counts treat hyphenated terms and prices as one word. UI labels without a sentence ending are included where they carry meaning.
 
 | Copy | Words | Result |
 |---|---:|---|
@@ -22,6 +22,11 @@ Audit date: 2026-08-28. Counts treat hyphenated terms and prices as one word. UI
 | Tasks or time entries with client and project names. | 9 | Pass |
 | Invoices CSV | 2 | Pass |
 | Issued or draft invoices with client and project names. | 9 | Pass |
+| Import CSV files | 3 | Pass |
+| Linked invoice matches | 3 | Pass |
+| Review or reverse work you marked as billed. | 8 | Pass |
+| Unlink invoice | 2 | Pass |
+| Import more work, or unlink a match to bring it back. | 11 | Pass |
 | Your attention queue will appear here. | 6 | Pass |
 | Import completed work first. | 4 | Pass |
 | Add invoices to review possible matches. | 6 | Pass |

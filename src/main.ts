@@ -92,16 +92,28 @@ function workRow(work: WorkItem): string {
   return `<li class="work-slip"><label class="check-control"><input type="checkbox" data-check-work="${escapeHtml(work.id)}" ${state.checked[work.id] ? 'checked' : ''}><span class="sr-only">Mark ${escapeHtml(work.description)} ready to invoice</span></label><div class="work-main"><div class="work-meta"><span>${escapeHtml(work.date || 'No date')}</span><span>${escapeHtml(work.client)}</span><span>${escapeHtml(work.project)}</span></div><h3>${escapeHtml(work.description)}</h3>${suggestion}</div><strong class="amount">${formatMoney(work.amount)}</strong></li>`;
 }
 
+function linkedMatches(): string {
+  const matches = Object.entries(state.decisions).flatMap(([workId, decision]) => {
+    if (decision.kind !== 'linked') return [];
+    const work = state.work.find((item) => item.id === workId);
+    if (!work) return [];
+    const invoice = state.invoices.find((item) => item.id === decision.invoiceId);
+    return [{ work, invoice }];
+  });
+  if (!matches.length) return '';
+  return `<section class="linked-matches" aria-labelledby="linked-matches-title"><div><h3 id="linked-matches-title">Linked invoice matches</h3><p>Review or reverse work you marked as billed.</p></div><ul>${matches.map(({ work, invoice }) => `<li><div><strong>${escapeHtml(work.description)}</strong><span>${escapeHtml(invoice?.number ?? 'Missing invoice')} · ${escapeHtml(work.client)}</span></div><button class="text-button" data-unlink-work="${escapeHtml(work.id)}">Unlink invoice</button></li>`).join('')}</ul></section>`;
+}
+
 function workspace(): string {
   const queue = queueFor(state);
   const total = queue.reduce((sum, work) => sum + work.amount, 0);
   const linked = Object.values(state.decisions).filter((item) => item.kind === 'linked').length;
   const hasData = state.work.length || state.invoices.length;
-  return `<div class="workspace" data-testid="workspace"><div class="import-grid">${importCard('work')}${importCard('invoices')}</div>${mappingPanel()}
+  return `<div class="workspace" data-testid="workspace"><section class="import-section" aria-labelledby="import-title"><h2 id="import-title" class="sr-only">Import CSV files</h2><div class="import-grid">${importCard('work')}${importCard('invoices')}</div>${mappingPanel()}</section>
     ${hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Attention queue</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
       <div class="toolbar"><label>Currency<select id="currency" aria-label="Display currency"><option ${state.currency === 'USD' ? 'selected' : ''}>USD</option><option ${state.currency === 'GBP' ? 'selected' : ''}>GBP</option><option ${state.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${state.currency === 'CAD' ? 'selected' : ''}>CAD</option><option ${state.currency === 'AUD' ? 'selected' : ''}>AUD</option></select></label><div><button data-action="export-checklist" ${queue.length ? '' : 'disabled'}>Export checklist CSV</button><button class="ghost" data-action="export-workspace">Export workspace</button><label class="ghost buttonish" for="import-workspace">Import workspace</label><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"></div></div>
-      ${queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><h3>No completed work needs attention</h3><p>Import more work, or reset a linked match to bring it back.</p></div>`}
-      <div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><h3>Your attention queue will appear here</h3><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"></div>`}</div>`;
+      ${queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><h3>No completed work needs attention</h3><p>Import more work, or unlink a match to bring it back.</p></div>`}
+      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><h3>Your attention queue will appear here</h3><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"></div>`}</div>`;
 }
 
 function snapshotList(): string {
@@ -213,6 +225,7 @@ function bindEvents(): void {
   document.querySelector<HTMLSelectElement>('#currency')?.addEventListener('change', (event) => { state.currency = (event.currentTarget as HTMLSelectElement).value; void persistAndRender('Currency display updated.'); });
   document.querySelectorAll<HTMLInputElement>('[data-check-work]').forEach((input) => input.addEventListener('change', () => { state.checked[input.dataset.checkWork ?? ''] = input.checked; void persistAndRender(input.checked ? 'Item marked ready to invoice.' : 'Item returned to the queue.'); }));
   document.querySelectorAll<HTMLButtonElement>('[data-link-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.linkWork; const invoiceId = button.dataset.invoice; if (id && invoiceId) { state.decisions[id] = { kind: 'linked', invoiceId }; void persistAndRender('Invoice linked. The item left the attention queue.'); } }));
+  document.querySelectorAll<HTMLButtonElement>('[data-unlink-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.unlinkWork; if (id) { delete state.decisions[id]; void persistAndRender('Invoice link removed. The work returned to the attention queue.'); } }));
   document.querySelectorAll<HTMLButtonElement>('[data-keep-work]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.keepWork; if (id) { state.decisions[id] = { kind: 'keep' }; void persistAndRender('Match reviewed. The work stays in the queue.'); } }));
   document.querySelectorAll<HTMLElement>('[data-action]').forEach((button) => button.addEventListener('click', () => void action(button.dataset.action ?? '')));
   document.querySelector<HTMLInputElement>('#import-workspace')?.addEventListener('change', async (event) => {

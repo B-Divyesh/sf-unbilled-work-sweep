@@ -40,6 +40,12 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   await expect(page.getByText('Invoice linked. The item left the attention queue.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('3,640');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Unlink invoice' })).toBeVisible();
+  await page.getByRole('button', { name: 'Unlink invoice' }).click();
+  await expect(page.getByText('Invoice link removed. The work returned to the attention queue.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('5,840');
 });
 
 test('@claim:csv-export exports one checklist row per queue item', async ({ page }) => {
@@ -258,6 +264,24 @@ test('routes, keyboard landmarks, and serious accessibility issues pass', async 
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main')).toBeVisible();
+});
+
+test('demo heading order and persistent controls meet the accessibility contract', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/demo');
+  const results = await new AxeBuilder({ page }).withRules(['heading-order']).analyze();
+  expect(results.violations).toEqual([]);
+  await expect(page.locator('h1').first()).toHaveText('Review work before you invoice');
+  await expect(page.locator('h2').first()).toHaveText('Import CSV files');
+  const targets = await page.locator('.demo-banner button').evaluateAll((buttons) => buttons.map((button) => {
+    const bounds = button.getBoundingClientRect();
+    return { name: button.textContent?.trim(), width: bounds.width, height: bounds.height };
+  }));
+  expect(targets.map(({ name }) => name)).toEqual(['Reset demo', 'Start for real']);
+  for (const target of targets) {
+    expect(target.width).toBeGreaterThanOrEqual(44);
+    expect(target.height).toBeGreaterThanOrEqual(44);
+  }
 });
 
 test('query demo entry and invalid CSV error state work', async ({ page }) => {
