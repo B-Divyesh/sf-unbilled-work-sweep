@@ -40,12 +40,17 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   await expect(page.getByText('Invoice linked. The item left the attention queue.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('3,640');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Linked matches' })).toBeVisible();
+  await expect(page.locator('.linked-matches')).toContainText('Final responsive page build');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Unlink invoice' })).toBeVisible();
-  await page.getByRole('button', { name: 'Unlink invoice' }).click();
-  await expect(page.getByText('Invoice link removed. The work returned to the attention queue.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
+  const unlink = page.getByRole('button', { name: 'Unlink invoice' });
+  await expect(unlink).toBeVisible();
+  await unlink.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Invoice unlinked. The item returned to the attention queue.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
+  await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
 });
 
 test('@claim:csv-export exports one checklist row per queue item', async ({ page }) => {
@@ -258,6 +263,9 @@ test('routes, keyboard landmarks, and serious accessibility issues pass', async 
     await expect(page).toHaveTitle(/Unbilled Work Sweep/);
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
+    expect(results.violations.find((violation) => violation.id === 'heading-order')).toBeUndefined();
+    const headingLevels = await page.locator('h1, h2, h3, h4, h5, h6').evaluateAll((headings) => headings.map((heading) => Number(heading.tagName.slice(1))));
+    headingLevels.slice(1).forEach((level, index) => expect(level).toBeLessThanOrEqual(headingLevels[index] + 1));
   }
   await page.goto('/');
   await page.keyboard.press('Tab');
@@ -297,5 +305,10 @@ test('the 390px layout stays inside the viewport', async ({ page }) => {
   await page.goto('/demo');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+  for (const name of ['Reset demo', 'Start for real']) {
+    const box = await page.getByRole('button', { name }).boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
   await expect(page.getByRole('button', { name: 'Export checklist CSV' })).toBeVisible();
 });

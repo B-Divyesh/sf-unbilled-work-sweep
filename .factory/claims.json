@@ -11,7 +11,7 @@
     "claim": "Invoice matching suggestions stay under the user's control",
     "where": "landing, demo, README",
     "test": "npm test -- --grep @claim:review-matches",
-    "sandbox": "fresh demo; link one suggestion, reload, unlink it, and assert the same work row and total return to the queue"
+    "sandbox": "fresh demo; link one suggestion, reload, then keyboard-unlink it and assert the row and full queue total return"
   },
   {
     "id": "csv-export",

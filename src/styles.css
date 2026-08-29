@@ -75,12 +75,12 @@ h3 { font-size: 1.12rem; line-height: 1.25; }
 .import-card { min-height: 220px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 28px; border: 3px dashed #677269; background: var(--paper); transition: transform 180ms ease, background 180ms ease; }
 .import-card.has-data { border-style: solid; border-color: var(--moss); background: #e7eee5; }
 .import-card.dragging { transform: translateY(-8px); background: var(--mist); }
-.import-card h3 { font-size: 1.4rem; margin: 10px 0 6px; }
+.import-title { color: var(--ink) !important; font-size: 1.4rem; line-height: 1.25; font-weight: 800; margin: 10px 0 6px !important; }
 .import-card p { color: #435064; margin-bottom: 0; }
 .file-number { font: 700 1rem Georgia, serif; color: var(--coral-dark); border-bottom: 2px solid currentColor; }
 
 .mapping-panel { display: grid; grid-template-columns: minmax(220px, .4fr) 1fr; gap: 40px; margin-top: 32px; padding: 32px; border: 3px solid var(--ink); background: var(--mist); box-shadow: 8px 8px 0 var(--ink); }
-.mapping-panel h3 { font: 700 1.8rem/1.1 Georgia, serif; margin-bottom: 14px; }
+.mapping-panel h2 { font: 700 1.8rem/1.1 Georgia, serif; margin-bottom: 14px; letter-spacing: -.02em; }
 .mapping-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .mapping-grid label, .toolbar label, #license-form label { display: grid; gap: 6px; font-size: .84rem; font-weight: 800; }
 select, input { min-height: 44px; border: 2px solid var(--ink); background: var(--paper-bright); padding: 8px 12px; border-radius: 0; }
@@ -123,7 +123,7 @@ select, input { min-height: 44px; border: 2px solid var(--ink); background: var(
 .no-match { color: #5e6876; font-size: .9rem; margin: 0; }
 .empty-state { text-align: center; padding: 64px 24px; border: 2px dashed #798279; background: var(--paper); }
 .empty-state > span { display: block; font: 700 3rem Georgia, serif; color: var(--moss); }
-.empty-state h3 { font: 700 1.7rem Georgia, serif; margin: 8px 0; }
+.empty-title { color: var(--ink); font: 700 1.7rem Georgia, serif; margin: 8px auto; }
 .empty-state p { margin-inline: auto; }
 .import-empty { margin-top: 32px; }
 .sample-format { font-size: .86rem; color: #435064; }
@@ -131,12 +131,13 @@ select, input { min-height: 44px; border: 2px solid var(--ink); background: var(
 .danger-link { color: var(--coral-dark); }
 .linked-matches { margin-top: 32px; padding: 24px; border: 2px solid var(--moss); background: #e7eee5; }
 .linked-matches > div { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; }
-.linked-matches h3 { font: 700 1.4rem Georgia, serif; }
+.linked-matches h3 { font: 700 1.4rem Georgia, serif; margin-bottom: 4px; }
 .linked-matches p { margin: 0; color: #435064; }
-.linked-matches ul { list-style: none; margin: 16px 0 0; padding: 0; }
-.linked-matches li { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 12px 0; border-top: 1px solid #869b89; }
-.linked-matches li div { display: grid; }
-.linked-matches li span { color: #435064; font-size: .9rem; }
+.linked-matches ul { list-style: none; margin: 18px 0 0; padding: 0; }
+.linked-matches li { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px 0; border-top: 1px solid #8d9b8f; }
+.linked-matches li > div { display: grid; gap: 2px; }
+.linked-matches li span { color: #435064; font-size: .88rem; }
+.linked-matches button { flex-shrink: 0; }
 .snapshots { margin-top: 32px; padding: 24px; border: 2px solid var(--moss); }
 .snapshots h3 { margin-bottom: 16px; }
 .snapshots ul { list-style: none; margin: 0; padding: 0; }
@@ -162,6 +163,7 @@ select, input { min-height: 44px; border: 2px solid var(--ink); background: var(
 
 .demo-banner { position: sticky; top: 0; z-index: 10; min-height: 52px; display: flex; justify-content: center; align-items: center; gap: 22px; padding: 8px 24px; background: #f4dfad; border-bottom: 2px solid var(--ink); font-size: .9rem; }
 .demo-banner div { display: flex; gap: 14px; }
+.demo-banner .text-button { min-height: 44px; }
 .demo-main { padding: 72px clamp(20px, 5vw, 72px) 96px; background: var(--paper-bright); }
 .demo-heading { max-width: 860px; margin-bottom: 48px; }
 .demo-heading h1 { font-size: clamp(2.8rem, 7vw, 5.4rem); }
@@ -225,7 +227,7 @@ select, input { min-height: 44px; border: 2px solid var(--ink); background: var(
   .match-box > div { width: 100%; flex-direction: column; }
   .match-box button { width: 100%; }
   .linked-matches { padding: 20px; }
-  .linked-matches > div, .linked-matches li { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .linked-matches > div, .linked-matches li { align-items: stretch; flex-direction: column; gap: 8px; }
   .linked-matches .text-button { width: 100%; }
   .queue-actions { align-items: stretch; flex-direction: column; }
   .queue-actions .button { width: 100%; }

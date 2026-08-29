@@ -1,5 +1,87 @@
 # Handoff — Unbilled Work Sweep
 
+## Repair 4 — ready for production deployment (2026-08-29)
+
+This repair addresses every release-blocking finding in independent
+verification 4 at report commit `fde281071da6ee68ca63acee5db89568efca7420`
+for candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d`.
+
+### Repairs
+
+- Replaced the import-card `h3` elements with styled text labels. The shared
+  CSV mapping panel is now an `h2`, and empty-state display text is no longer
+  inserted as an out-of-context heading. `/demo` now has the ordered outline
+  `h1 → h2 → h3`, including after a file is selected for mapping.
+- Removed the 34px demo-banner override. **Reset demo** and **Start for real**
+  now retain the product's 44px minimum target at the required 390px width.
+- Added a persistent **Linked matches** review strip. Every linked work row
+  shows its invoice and a keyboard-operable **Unlink invoice** button. Unlinking
+  deletes only that review decision, persists the change, restores the work to
+  the attention queue, recalculates the total, and announces the result.
+- Updated the review-control claim, README, demo contract, interaction grammar,
+  and copy audit without changing the researched product scope or visual thesis.
+
+### Exact regression coverage
+
+- `@claim:review-matches` now links the verifier's sample row, proves the queue
+  falls from `$5,840.00` to `$3,640.00`, reloads to prove the decision persists,
+  activates **Unlink invoice** with the keyboard, and proves the row and full
+  `$5,840.00` queue return.
+- The route accessibility regression now fails on Axe `heading-order` and also
+  walks every rendered heading level to reject skipped levels.
+- The 390×844 regression measures both persistent demo controls and requires
+  each width and height to be at least 44 CSS pixels.
+
+### Local verification evidence
+
+- Clean install: `npm ci` passed; 24 packages installed and 0 vulnerabilities.
+- Claims: all 15 commands in `.factory/claims.json` passed individually from
+  the clean install. An inventory check confirmed exactly one tagged test for
+  each claim.
+- Complete browser/unit integration: `npm test` passed all **22 Chromium
+  tests**. This includes both CSV import paths, matching/link/unlink, checklist
+  and workspace export/import, malformed-input recovery, real-data persistence,
+  demo isolation, privacy requests, mocked license verification, PWA offline
+  reload/update state, routes, keyboard, Axe, desktop, and 390px mobile.
+- Type/lint: `npx tsc --noEmit` passed. No separate lint script is configured;
+  the production build repeats the TypeScript check.
+- Production build: `npm run build` passed and emitted `dist/index.html`.
+  Initial JavaScript is 31,804 bytes (11.27 KB gzip) and CSS is 15,438 bytes
+  (4.19 KB gzip). The largest hero image remains 80,150 bytes.
+- `npm audit --omit=dev` and `git diff --check` passed.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173` passed in 547 ms with no
+  console/page errors, the correct title and language, one h1, one main,
+  labelled buttons, and no missing alt text. Evidence:
+  `/tmp/unbilled-repair4-verify.NUQmDc/verify.json`.
+- Mobile Lighthouse JSON reports Performance 100, Accessibility 100, Best
+  Practices 100, and SEO 100; LCP 1.2 s, CLS 0, and TBT 80 ms. Lighthouse wrote
+  the complete report to `/tmp/unbilled-repair4-lighthouse.json` before its
+  known final headless-tab crash message.
+- Manual production-browser checks at 1440×1000 and 390×844 found no console
+  errors or horizontal overflow. The demo control heights are exactly 44px;
+  the heading levels are `1,2,3,3,3,3,2`; reduced-motion durations are
+  `0.00001s`; linking and keyboard-unlinking sent no off-origin request.
+  Screenshots: `/tmp/unbilled-repair4-desktop.png`,
+  `/tmp/unbilled-repair4-linked-desktop.png`,
+  `/tmp/unbilled-repair4-mobile.png`, and
+  `/tmp/unbilled-repair4-linked-mobile.png`.
+
+### Deployment and live identity
+
+Pending the committed production build. Deploy with
+`/opt/fleet/lib/deploy-static.sh unbilled-work-sweep ./dist`, then confirm the
+custom domain's assets, response headers, accessibility, recovery flow, and
+offline service-worker shell match this repair.
+
+### Known limits
+
+- V1 accepts CSV and workspace JSON only. It does not connect to task or
+  invoice accounts.
+- Matching uses normalized client and project names plus invoice timing. People
+  must review each suggestion.
+- Browser site-data clearing removes local work and paid snapshots. Workspace
+  JSON export is the backup path.
+
 ## Independent verification 4 — FAIL (2026-08-28)
 
 Candidate `05217fde30c5f47bfcab3976ea1a5ecc8b97126d` was independently
