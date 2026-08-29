@@ -37,7 +37,7 @@ h3 { font-size: 1.12rem; line-height: 1.25; }
 .skip-link:focus { transform: translateY(0); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .visually-hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
-.visually-hidden-file:focus + * { outline: 4px solid var(--focus); }
+.visually-hidden-file:focus-visible + label { outline: 4px solid var(--focus); outline-offset: 4px; }
 
 .site-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px clamp(20px, 5vw, 72px); border-bottom: 2px solid var(--ink); background: rgba(245, 238, 219, .97); }
 .wordmark { min-height: 44px; display: inline-flex; align-items: center; color: var(--ink); text-decoration: none; font-weight: 850; letter-spacing: -.02em; }

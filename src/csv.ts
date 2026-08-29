@@ -71,33 +71,80 @@ export function mappingFields(kind: ImportKind): { key: string; label: string; r
 }
 
 const truthy = (value: string) => /^(yes|true|1|billed|invoiced|paid)$/i.test(value.trim());
-const money = (value: string) => Number(value.replace(/[^0-9.-]/g, '')) || 0;
 const safe = (row: Record<string, string>, mapping: Mapping, key: string) => mapping[key] ? row[mapping[key]] ?? '' : '';
 const idFor = (values: string[], index: number) => `${values.join('|').toLowerCase().replace(/[^a-z0-9|]/g, '').slice(0, 50)}-${index}`;
 
+const readableList = (values: string[]): string => values.length < 2
+  ? values[0] ?? ''
+  : `${values.slice(0, -1).join(', ')}${values.length > 2 ? ',' : ''} and ${values.at(-1)}`;
+
+function numeric(value: string): number | null {
+  const normalized = value.trim().replace(/[$£€¥,\s]/g, '');
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/u.test(normalized)) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function invalidRows(kind: 'Work' | 'Invoice', failures: { row: number; issues: string[] }[]): never {
+  const details = failures.map(({ row, issues }) => `row ${row}: ${issues.join('; ')}`).join('. ');
+  throw new Error(`${kind} CSV ${details}. Fix ${failures.length === 1 ? 'that row' : 'those rows'} and import again.`);
+}
+
 export function mapWork(csv: ParsedCsv, mapping: Mapping): WorkItem[] {
-  return csv.rows.map((row, index) => {
+  const failures: { row: number; issues: string[] }[] = [];
+  const work = csv.rows.map((row, index) => {
     const date = safe(row, mapping, 'date');
     const client = safe(row, mapping, 'client');
     const project = safe(row, mapping, 'project');
     const description = safe(row, mapping, 'description');
-    const amount = money(safe(row, mapping, 'amount')) || money(safe(row, mapping, 'hours')) * money(safe(row, mapping, 'rate'));
+    const missing = [
+      ['date', date], ['client', client], ['project', project], ['description', description]
+    ].filter(([, value]) => !value.trim()).map(([field]) => field);
+    const issues: string[] = [];
+    if (missing.length) issues.push(`${readableList(missing)} ${missing.length === 1 ? 'is' : 'are'} required`);
+
+    const amountText = safe(row, mapping, 'amount');
+    const hoursText = safe(row, mapping, 'hours');
+    const rateText = safe(row, mapping, 'rate');
+    let amount = 0;
+    if (amountText.trim()) {
+      const parsedAmount = numeric(amountText);
+      if (parsedAmount === null) issues.push('amount must be a number');
+      else amount = parsedAmount;
+    } else if (hoursText.trim() || rateText.trim()) {
+      const hours = hoursText.trim() ? numeric(hoursText) : null;
+      const rate = rateText.trim() ? numeric(rateText) : null;
+      if (hours === null || rate === null) issues.push('hours and rate must both be numbers when amount is blank');
+      else amount = hours * rate;
+    }
+    if (issues.length) failures.push({ row: index + 2, issues });
     return {
       id: idFor([date, client, project, description], index), date, client, project, description,
       status: safe(row, mapping, 'status') || 'completed', amount,
       billed: truthy(safe(row, mapping, 'billed'))
     };
   });
+  if (failures.length) invalidRows('Work', failures);
+  return work;
 }
 
 export function mapInvoices(csv: ParsedCsv, mapping: Mapping): Invoice[] {
-  return csv.rows.map((row, index) => {
+  const failures: { row: number; issues: string[] }[] = [];
+  const invoices = csv.rows.map((row, index) => {
     const date = safe(row, mapping, 'date');
     const number = safe(row, mapping, 'number');
     const client = safe(row, mapping, 'client');
     const project = safe(row, mapping, 'project');
+    const missing = [['invoice date', date], ['invoice number', number], ['client', client]]
+      .filter(([, value]) => !value.trim()).map(([field]) => field);
+    if (missing.length) failures.push({
+      row: index + 2,
+      issues: [`${readableList(missing)} ${missing.length === 1 ? 'is' : 'are'} required`]
+    });
     return { id: idFor([date, number, client, project], index), date, number, client, project, status: safe(row, mapping, 'status') || 'issued' };
   });
+  if (failures.length) invalidRows('Invoice', failures);
+  return invoices;
 }
 
 export function toCsv(rows: string[][]): string {

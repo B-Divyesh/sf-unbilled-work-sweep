@@ -10,7 +10,7 @@ test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) 
     name: 'work.csv', mimeType: 'text/csv',
     buffer: Buffer.from('date,client,project,description,status,amount,hours,rate\n2026-08-01,Acme,Site,Build page,completed,100,,\n2026-08-02,Acme,Site,Call,in progress,50,,\n2026-08-03,Acme,Site,Research,completed,,2,75')
   });
-  await page.getByRole('button', { name: 'Import work' }).click();
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
   await expect(page.getByText('3 work rows imported.')).toBeVisible();
   await page.locator('#file-invoices').setInputFiles({
     name: 'invoices.csv', mimeType: 'text/csv',
@@ -19,6 +19,52 @@ test('@claim:csv-import imports work and invoice CSV exports', async ({ page }) 
   await page.getByRole('button', { name: 'Import invoices' }).click();
   await expect(page.getByText('1 invoice rows imported.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('250');
+  await expect(page.getByText('Possible invoice:').first()).toBeVisible();
+});
+
+test('@claim:validated-import rejects blank required cells and non-numeric amounts without replacing saved work', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-work').setInputFiles({
+    name: 'valid-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Site,Safe saved row,completed,125')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Safe saved row' })).toBeVisible();
+
+  await page.locator('#file-work').setInputFiles({
+    name: 'invalid-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n,,,,completed,not-a-number')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+
+  await expect(page.getByRole('alert')).toContainText('Work CSV row 2');
+  await expect(page.getByRole('alert')).toContainText('date, client, project, and description are required');
+  await expect(page.getByRole('alert')).toContainText('amount must be a number');
+  await expect(page.getByRole('heading', { name: 'Safe saved row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('125');
+
+  await page.locator('#file-work').setInputFiles({
+    name: 'recovered-work.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-02,Acme,Site,Recovered row,completed,250')
+  });
+  await page.getByRole('button', { name: 'Import work', exact: true }).click();
+  await expect(page.getByText('1 work rows imported.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Recovered row' })).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('250');
+
+  await page.locator('#file-invoices').setInputFiles({
+    name: 'valid-invoices.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('invoice date,invoice number,client,project\n2026-08-03,INV-SAFE,Acme,Site')
+  });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  await expect(page.getByText('Possible invoice:').first()).toBeVisible();
+  await page.locator('#file-invoices').setInputFiles({
+    name: 'invalid-invoices.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('invoice date,invoice number,client,project\n,,,Site')
+  });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  await expect(page.getByRole('alert')).toContainText('Invoice CSV row 2');
+  await expect(page.getByRole('alert')).toContainText('invoice date, invoice number, and client are required');
   await expect(page.getByText('Possible invoice:').first()).toBeVisible();
 });
 
@@ -48,6 +94,32 @@ test('@claim:review-matches keeps suggestions under user control', async ({ page
   await unlink.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByText('Invoice unlinked. The item returned to the attention queue.')).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('5,840');
+  await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
+});
+
+test('@claim:invoice-replacement clears links to invoices missing from the replacement CSV', async ({ page }) => {
+  await page.goto('/demo');
+  await page.getByRole('button', { name: 'Link invoice' }).first().click();
+  await expect(page.getByTestId('queue-total')).toContainText('3,640');
+
+  await page.locator('#file-invoices').setInputFiles({
+    name: 'reordered-invoices.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('invoice date,invoice number,client,project,status\n2026-08-28,INV-UNRELATED,Other Client,Other Project,sent\n2026-08-25,INV-1042,Brightside Studios,Website launch,sent')
+  });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+  await expect(page.getByText('2 invoice rows imported.')).toBeVisible();
+  await expect(page.getByTestId('queue-total')).toContainText('3,640');
+  await expect(page.locator('.linked-matches')).toContainText('INV-1042');
+
+  await page.locator('#file-invoices').setInputFiles({
+    name: 'replacement-invoices.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('invoice date,invoice number,client,project,status\n2026-08-28,INV-UNRELATED,Other Client,Other Project,sent')
+  });
+  await page.getByRole('button', { name: 'Import invoices' }).click();
+
+  await expect(page.getByText('1 invoice rows imported. 1 stale invoice link cleared.')).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('5,840');
   await expect(page.getByRole('heading', { name: 'Final responsive page build' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Linked matches' })).toHaveCount(0);
@@ -135,6 +207,7 @@ test('@claim:local-persistence keeps a real workspace after reload', async ({ pa
   await page.goto('/');
   await page.locator('#file-work').setInputFiles({ name: 'saved.csv', mimeType: 'text/csv', buffer: Buffer.from('date,client,project,description,status,amount\n2026-08-01,Acme,Site,Saved task,completed,125') });
   await page.getByRole('button', { name: 'Import work' }).click();
+  await expect(page.getByText('1 work rows imported.')).toBeVisible();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Saved task' })).toBeVisible();
   await expect(page.getByTestId('queue-total')).toContainText('125');
@@ -227,7 +300,9 @@ test('workspace backup validation rejects malformed nested records and fields', 
     { ...valid, decisions: { 'w-bright-1': { kind: 'linked', invoiceId: 42 } } },
     { ...valid, checked: { 'w-bright-1': 'yes' } },
     { ...valid, work: [{ ...valid.work[0], amount: '125' }] },
+    { ...valid, work: [{ ...valid.work[0], description: '  ' }] },
     { ...valid, invoices: [{ ...valid.invoices[0], status: false }] },
+    { ...valid, invoices: [{ ...valid.invoices[0], number: '' }] },
     { ...valid, currency: 'JPY' },
     { ...valid, importedAt: 42 }
   ];
@@ -292,6 +367,25 @@ test('demo heading order and persistent controls meet the accessibility contract
   }
 });
 
+test('keyboard focus is visibly transferred to all three file chooser labels at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/demo');
+
+  for (const id of ['file-work', 'file-invoices', 'import-workspace']) {
+    for (let step = 0; step < 24 && await page.evaluate((target) => document.activeElement?.id !== target, id); step += 1) {
+      await page.keyboard.press('Tab');
+    }
+    await expect(page.locator(`#${id}`)).toBeFocused();
+    const focusStyle = await page.locator(`label[for="${id}"]`).evaluate((label) => {
+      const style = getComputedStyle(label);
+      return { outlineStyle: style.outlineStyle, outlineWidth: Number.parseFloat(style.outlineWidth), outlineColor: style.outlineColor };
+    });
+    expect(focusStyle.outlineStyle).toBe('solid');
+    expect(focusStyle.outlineWidth).toBeGreaterThanOrEqual(3);
+    expect(focusStyle.outlineColor).not.toBe('rgba(0, 0, 0, 0)');
+  }
+});
+
 test('query demo entry and invalid CSV error state work', async ({ page }) => {
   await page.goto('/?demo=1');
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
@@ -311,4 +405,13 @@ test('the 390px layout stays inside the viewport', async ({ page }) => {
     expect(box?.height).toBeGreaterThanOrEqual(44);
   }
   await expect(page.getByRole('button', { name: 'Export checklist CSV' })).toBeVisible();
+});
+
+test('the 390px landing page tolerates 200% text sizing', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await expect(page.getByRole('link', { name: 'Try it with sample data' })).toBeVisible();
 });

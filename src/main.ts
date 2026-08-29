@@ -77,7 +77,7 @@ function paidSection(): string {
 function importCard(kind: ImportKind): string {
   const name = kind === 'work' ? 'Completed work' : 'Invoices';
   const count = kind === 'work' ? state.work.length : state.invoices.length;
-  return `<div class="import-card ${count ? 'has-data' : ''}" data-drop-kind="${kind}"><div><span class="file-number">${kind === 'work' ? '01' : '02'}</span><p class="import-title">${name} CSV</p><p>${count ? `${count} rows imported` : kind === 'work' ? 'Tasks or time entries with client and project names.' : 'Issued or draft invoices with client and project names.'}</p></div><label class="button secondary" for="file-${kind}">${count ? `Replace ${name.toLowerCase()}` : `Choose ${name.toLowerCase()} CSV`}</label><input class="visually-hidden-file" id="file-${kind}" data-file-kind="${kind}" type="file" accept=".csv,text/csv"></div>`;
+  return `<div class="import-card ${count ? 'has-data' : ''}" data-drop-kind="${kind}"><div><span class="file-number">${kind === 'work' ? '01' : '02'}</span><p class="import-title">${name} CSV</p><p>${count ? `${count} rows imported` : kind === 'work' ? 'Tasks or time entries with client and project names.' : 'Issued or draft invoices with client and project names.'}</p></div><input class="visually-hidden-file" id="file-${kind}" data-file-kind="${kind}" type="file" accept=".csv,text/csv"><label class="button secondary" for="file-${kind}">${count ? `Replace ${name.toLowerCase()}` : `Choose ${name.toLowerCase()} CSV`}</label></div>`;
 }
 
 function mappingPanel(): string {
@@ -111,9 +111,9 @@ function workspace(): string {
   const hasData = state.work.length || state.invoices.length;
   return `<div class="workspace" data-testid="workspace"><section class="import-section" aria-labelledby="import-title"><h2 id="import-title" class="sr-only">Import CSV files</h2><div class="import-grid">${importCard('work')}${importCard('invoices')}</div>${mappingPanel()}</section>
     ${hasData ? `<section class="queue" aria-labelledby="queue-title"><div class="queue-head"><div><p class="eyebrow">Attention queue</p><h2 id="queue-title">${queue.length} completed ${queue.length === 1 ? 'item' : 'items'} to review</h2><p>${linked} ${linked === 1 ? 'match' : 'matches'} linked. Already billed and unfinished rows are excluded.</p></div><div class="total"><span>Possible unbilled value</span><strong data-testid="queue-total">${formatMoney(total)}</strong></div></div>
-      <div class="toolbar"><label>Currency<select id="currency" aria-label="Display currency"><option ${state.currency === 'USD' ? 'selected' : ''}>USD</option><option ${state.currency === 'GBP' ? 'selected' : ''}>GBP</option><option ${state.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${state.currency === 'CAD' ? 'selected' : ''}>CAD</option><option ${state.currency === 'AUD' ? 'selected' : ''}>AUD</option></select></label><div><button data-action="export-checklist" ${queue.length ? '' : 'disabled'}>Export checklist CSV</button><button class="ghost" data-action="export-workspace">Export workspace</button><label class="ghost buttonish" for="import-workspace">Import workspace</label><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"></div></div>
+      <div class="toolbar"><label>Currency<select id="currency" aria-label="Display currency"><option ${state.currency === 'USD' ? 'selected' : ''}>USD</option><option ${state.currency === 'GBP' ? 'selected' : ''}>GBP</option><option ${state.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${state.currency === 'CAD' ? 'selected' : ''}>CAD</option><option ${state.currency === 'AUD' ? 'selected' : ''}>AUD</option></select></label><div><button data-action="export-checklist" ${queue.length ? '' : 'disabled'}>Export checklist CSV</button><button class="ghost" data-action="export-workspace">Export workspace</button><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import workspace</label></div></div>
       ${queue.length ? `<ol class="work-list" data-testid="work-list">${queue.map(workRow).join('')}</ol>` : `<div class="empty-state"><span aria-hidden="true">✓</span><p class="empty-title">No completed work needs attention</p><p>Import more work, or unlink a match to bring it back.</p></div>`}
-      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your attention queue will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"></div>`}</div>`;
+      ${linkedMatches()}<div class="queue-actions"><button class="button secondary" data-action="save-snapshot">${licensed ? 'Save named snapshot' : 'Save snapshots · paid'}</button><button class="text-button danger-link" data-action="clear-data">Clear imported data</button></div>${snapshotList()}</section>` : `<div class="empty-state import-empty"><span aria-hidden="true">↳</span><p class="empty-title">Your attention queue will appear here</p><p>Import completed work first. Add invoices to review possible matches.</p><p class="sample-format"><strong>Work columns:</strong> date, client, project, description, status, amount. Hours and rate can replace amount.</p><input class="visually-hidden-file" id="import-workspace" type="file" accept="application/json"><label class="ghost buttonish" for="import-workspace">Import a workspace backup</label></div>`}</div>`;
 }
 
 function snapshotList(): string {
@@ -217,9 +217,35 @@ function bindEvents(): void {
     const mapping = Object.fromEntries([...data.entries()].map(([key, value]) => [key, String(value)]));
     const fields = mappingFields(pending.kind);
     if (fields.some((field) => field.required && !mapping[field.key])) { error = 'Choose a CSV column for every required field, then import again.'; void render(); return; }
-    if (pending.kind === 'work') state.work = mapWork(pending.csv, mapping); else state.invoices = mapInvoices(pending.csv, mapping);
-    const count = pending.csv.rows.length; const noun = pending.kind === 'work' ? 'work' : 'invoice'; pending = null;
-    void persistAndRender(`${count} ${noun} rows imported.`);
+    try {
+      let clearedLinks = 0;
+      if (pending.kind === 'work') {
+        state.work = mapWork(pending.csv, mapping);
+      } else {
+        const invoices = mapInvoices(pending.csv, mapping);
+        const invoiceByIdentity = new Map(invoices.map((invoice) => [
+          `${invoice.client.trim().toLowerCase()}\u0000${invoice.number.trim().toLowerCase()}`,
+          invoice
+        ]));
+        for (const [workId, decision] of Object.entries(state.decisions)) {
+          if (decision.kind !== 'linked') continue;
+          const previous = state.invoices.find((invoice) => invoice.id === decision.invoiceId);
+          const replacement = previous && invoiceByIdentity.get(`${previous.client.trim().toLowerCase()}\u0000${previous.number.trim().toLowerCase()}`);
+          if (replacement) state.decisions[workId] = { kind: 'linked', invoiceId: replacement.id };
+          else { delete state.decisions[workId]; clearedLinks += 1; }
+        }
+        state.invoices = invoices;
+      }
+      const count = pending.csv.rows.length;
+      const noun = pending.kind === 'work' ? 'work' : 'invoice';
+      const cleared = clearedLinks ? ` ${clearedLinks} stale invoice ${clearedLinks === 1 ? 'link' : 'links'} cleared.` : '';
+      pending = null;
+      void persistAndRender(`${count} ${noun} rows imported.${cleared}`);
+    } catch (caught) {
+      error = caught instanceof Error ? caught.message : 'The CSV rows could not be imported. Fix the file and try again.';
+      message = '';
+      void render().then(() => document.querySelector<HTMLElement>('[role="alert"]')?.focus());
+    }
   });
   document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', (event) => { event.preventDefault(); const token = new FormData(event.currentTarget as HTMLFormElement).get('license'); if (typeof token === 'string' && token.trim()) void verifyLicense(token.trim(), true); });
   document.querySelector<HTMLSelectElement>('#currency')?.addEventListener('change', (event) => { state.currency = (event.currentTarget as HTMLSelectElement).value; void persistAndRender('Currency display updated.'); });

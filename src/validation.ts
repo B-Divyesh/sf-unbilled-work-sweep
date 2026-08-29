@@ -15,16 +15,22 @@ function stringFields(value: Record<string, unknown>, keys: string[]): boolean {
   return keys.every((key) => typeof value[key] === 'string');
 }
 
+function nonEmptyStringFields(value: Record<string, unknown>, keys: string[]): boolean {
+  return keys.every((key) => typeof value[key] === 'string' && value[key].trim().length > 0);
+}
+
 function isWorkItem(value: unknown): value is WorkItem {
   if (!record(value) || !exactKeys(value, ['id', 'date', 'client', 'project', 'description', 'status', 'amount', 'billed'])) return false;
   return stringFields(value, ['id', 'date', 'client', 'project', 'description', 'status'])
+    && nonEmptyStringFields(value, ['date', 'client', 'project', 'description'])
     && typeof value.amount === 'number' && Number.isFinite(value.amount)
     && typeof value.billed === 'boolean';
 }
 
 function isInvoice(value: unknown): value is Invoice {
   if (!record(value) || !exactKeys(value, ['id', 'date', 'number', 'client', 'project', 'status'])) return false;
-  return stringFields(value, ['id', 'date', 'number', 'client', 'project', 'status']);
+  return stringFields(value, ['id', 'date', 'number', 'client', 'project', 'status'])
+    && nonEmptyStringFields(value, ['date', 'number', 'client']);
 }
 
 function isDecision(value: unknown): value is Decision {

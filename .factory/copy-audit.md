@@ -31,6 +31,9 @@ Audit date: 2026-08-29. Counts treat hyphenated terms and prices as one word. UI
 | Unlink invoice | 2 | Pass |
 | Invoice linked. The item left the attention queue. | 8 | Pass |
 | Invoice unlinked. The item returned to the attention queue. | 9 | Pass |
+| Work CSV row 2: date, client, project, and description are required; amount must be a number. | 16 | Pass |
+| Fix that row and import again. | 6 | Pass |
+| 1 invoice rows imported. 1 stale invoice link cleared. | 9 | Pass |
 | No completed work needs attention | 5 | Pass |
 | Import more work, or unlink a match to bring it back. | 11 | Pass |
 | Work columns: date, client, project, description, status, amount. | 8 | Pass |

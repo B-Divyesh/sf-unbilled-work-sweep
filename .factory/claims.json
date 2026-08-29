@@ -7,11 +7,25 @@
     "sandbox": "fresh browser context; upload two in-memory CSV fixtures and assert parsed rows, amount, and suggested invoice"
   },
   {
+    "id": "validated-import",
+    "claim": "Blank required cells and non-numeric amounts are rejected without replacing saved data",
+    "where": "README, CSV mapping errors",
+    "test": "npm test -- --grep @claim:validated-import",
+    "sandbox": "fresh browser context; save valid work, attempt the verifier's blank and non-numeric row plus a blank invoice row, assert row-number errors and unchanged data, then recover with a valid file"
+  },
+  {
     "id": "review-matches",
     "claim": "Invoice matching suggestions stay under the user's control",
     "where": "landing, demo, README",
     "test": "npm test -- --grep @claim:review-matches",
     "sandbox": "fresh demo; link one suggestion, reload, then keyboard-unlink it and assert the row and full queue total return"
+  },
+  {
+    "id": "invoice-replacement",
+    "claim": "Replacing invoice data clears links to invoices that are no longer present",
+    "where": "README, invoice replacement status",
+    "test": "npm test -- --grep @claim:invoice-replacement",
+    "sandbox": "fresh demo; link the first suggestion, retain it after the same invoice moves rows, then replace with an unrelated CSV and assert the stale link clears and the full queue returns"
   },
   {
     "id": "csv-export",

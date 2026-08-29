@@ -1,5 +1,76 @@
 # Handoff — Unbilled Work Sweep
 
+## Repair 5 — ready to deploy (2026-08-29)
+
+This repair addresses every product finding in independent verification 5 at
+report commit `51f45fd7f039431ca4b01f597c7747130bbbe17c` for candidate
+`03d646bf57f90223a4748f2c897daf313824ab70`.
+
+### Repairs
+
+- Reordered each hidden file input before its visible label and transferred
+  `:focus-visible` to that label with a 4px `#0969da` outline and 4px offset.
+  Completed-work, invoice, and workspace file controls now retain visible
+  focus during sequential keyboard navigation at 390px.
+- Added row-level validation before any CSV replaces saved data. Work rows now
+  require date, client, project, and description. Invoice rows require date,
+  number, and client. Supplied amount, hours, and rate values must be numeric.
+  Errors identify the CSV row and invalid fields, preserve the prior workspace,
+  and allow a corrected file to be imported immediately.
+- Tightened workspace-backup validation so blank required work or invoice
+  fields cannot bypass the CSV checks.
+- Invoice replacement now reconciles links by client and invoice number. Links
+  are retained when the same invoice moves to another CSV row and cleared when
+  that invoice is absent. Cleared work returns to the attention queue, its
+  value returns to the total, and the status reports how many links cleared.
+- Added `validated-import` and `invoice-replacement` claim entries and exact
+  browser regressions. Added a separate live checkout contract command that
+  follows the Sociobot redirect without purchasing.
+- The controller’s billing repair is live. `npm run check:checkout` followed
+  `https://api.sociobot.in/api/v1/products/unbilled-work-sweep/checkout` and
+  received HTTP 200 at `checkout.dodopayments.com`; no purchase was attempted.
+
+### Reproduction and regression evidence
+
+- Before the fix, the three new regressions all failed: the verifier’s exact
+  `,,,,completed,not-a-number` row produced no alert, replacement invoices left
+  the queue at `$3,640`, and the focused file label computed `outline: none`.
+- After the fix, those three focused browser regressions pass. The validation
+  claim also proves invoice required-field errors, preservation of prior data,
+  and successful recovery with corrected files.
+- `.factory/claims.json` contains 17 claims with exactly one matching
+  `@claim:<id>` tag each. Every listed `npm test -- --grep @claim:<id>` command
+  was run separately and all 17 passed.
+
+### Complete local verification
+
+- Clean install: `npm ci` passed with 24 packages and 0 vulnerabilities.
+- Full browser suite: `npm test` passed 27/27 tests in Chromium 1.58.2.
+  Coverage includes desktop, 390×844 mobile, sequential keyboard focus, Axe on
+  every route, 200%/target-size checks retained from the candidate, privacy
+  request capture, IndexedDB and demo isolation, offline reload, service-worker
+  update state, paid-license mocking, CSV downloads, and recovery paths.
+- Type/lint: `npx tsc --noEmit` passed. This vanilla TypeScript project has no
+  separate lint script.
+- Production: `npm run build` passed with `dist/index.html` at its root. JS is
+  33,886 bytes (11.97 KB gzip); CSS is 15,815 bytes (4.24 KB gzip); the mobile
+  hero is 30,612 bytes. The generated service worker cache
+  `unbilled-work-sweep-01093d30bc6c` includes the exact JS and CSS assets.
+- Security/package: `npm audit --omit=dev`, JSON manifest parsing, claim
+  inventory validation, and `git diff --check` passed.
+- Local URL check: `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173`
+  returned HTTP 200 in 534 ms with no console/page errors, `lang=en`, one h1,
+  one main, labelled buttons, and no missing alt text. Evidence:
+  `/tmp/unbilled-repair5-local.XMM1XV/verify.json` plus desktop/mobile captures.
+- Local mobile Lighthouse on `/demo`: Performance 99, Accessibility 100, Best
+  Practices 100, SEO 100; FCP 1,017 ms, LCP 1,250 ms, CLS 0, TBT 117 ms.
+  Evidence: `/tmp/unbilled-repair5-lighthouse.json`.
+
+### Deployment and known gaps
+
+Deployment and live asset/response-policy checks are recorded below after the
+repair is pushed. No product gaps are known from local verification.
+
 ## Independent verification 5 — FAIL (2026-08-29)
 
 Candidate `03d646bf57f90223a4748f2c897daf313824ab70` was independently
