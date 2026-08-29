@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audit date: 2026-08-28. Counts treat hyphenated terms and prices as one word. UI labels without a sentence ending are included where they carry meaning.
+Audit date: 2026-08-29. Counts treat hyphenated terms and prices as one word. UI labels without a sentence ending are included where they carry meaning.
 
 | Copy | Words | Result |
 |---|---:|---|
@@ -25,6 +25,13 @@ Audit date: 2026-08-28. Counts treat hyphenated terms and prices as one word. UI
 | Your attention queue will appear here. | 6 | Pass |
 | Import completed work first. | 4 | Pass |
 | Add invoices to review possible matches. | 6 | Pass |
+| Linked matches | 2 | Pass |
+| Unlink a match to return its work to the attention queue. | 11 | Pass |
+| Unlink invoice | 2 | Pass |
+| Invoice linked. The item left the attention queue. | 8 | Pass |
+| Invoice unlinked. The item returned to the attention queue. | 9 | Pass |
+| No completed work needs attention | 5 | Pass |
+| Import more work, or unlink a match to bring it back. | 11 | Pass |
 | Work columns: date, client, project, description, status, amount. | 8 | Pass |
 | Hours and rate can replace amount. | 6 | Pass |
 | Three deliberate steps | 3 | Pass |
@@ -60,6 +67,7 @@ No sentence exceeds 22 words. No banned word appears.
 | The current list of possibly unbilled work | attention queue |
 | A source row describing finished work | completed work |
 | A candidate relationship to an invoice | suggested match |
+| A confirmed work-to-invoice relationship | linked match |
 | The downloadable billing preparation file | checklist |
 | A saved paid review summary | snapshot |
 | The isolated sample workspace | demo |

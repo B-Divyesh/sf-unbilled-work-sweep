@@ -11,7 +11,7 @@ One-click demo: <https://unbilled-work-sweep.sociobot.in/demo>
 ## What it does
 
 - Imports completed-work and invoice CSV exports.
-- Suggests invoice matches using client and project names. A suggestion changes nothing until you review it.
+- Suggests invoice matches using client and project names. A suggestion changes nothing until you review it, and every link can be reversed.
 - Lists completed rows that are not marked billed or linked to an invoice.
 - Exports the current attention queue as a CSV checklist.
 - Keeps real workspace data in IndexedDB on the device.
@@ -35,7 +35,7 @@ Invoice CSV:
 - Required: invoice date, invoice number, client
 - Optional: project, status
 
-The matcher normalizes client wording and compares client and project names. Invoice dates before work dates are not suggested. Every match remains a review choice.
+The matcher normalizes client wording and compares client and project names. Invoice dates before work dates are not suggested. Every match remains a review choice, and linked matches can be returned to the queue.
 
 ## Run locally
 
